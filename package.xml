@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package>
+  <name>realtime_duckie</name>
+  <version>0.0.1</version>
+  <description>HSV color based object tracking package</description>
+
+  <maintainer email="shengwen1997.tw@gmail.com">Shengwen Cheng</maintainer>
+
+  <license>MIT</license>
+
+  <!-- <url type="website">http://wiki.ros.org/duck_detect</url> -->
+
+  <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>cv_bridge</buildtool_depend>
+  <buildtool_depend>sensor_msgs</buildtool_depend>
+  <buildtool_depend>std_msgs</buildtool_depend>
+  <buildtool_depend>roscpp</buildtool_depend>
+  <buildtool_depend>genmsg</buildtool_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
