@@ -9,6 +9,8 @@
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
 
+#include "lane_detector.hpp"
+
 using namespace cv;
 
 int main(int argc, char* argv[])
@@ -40,6 +42,8 @@ int main(int argc, char* argv[])
 
         cv::Mat frame;
 
+	LaneDetector lane_detector;
+
 	while(1) {
 		camera.grab();
 		camera.retrieve(frame);
@@ -55,6 +59,8 @@ int main(int argc, char* argv[])
 
 		raw_image_publisher.publish(raw_img_msg);
 		distort_image_publisher.publish(distort_img_msg);
+
+		lane_detector.lane_detect(frame);
 
 		//cv::imshow("pi camera", distort_image);
 
