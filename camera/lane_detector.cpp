@@ -27,9 +27,9 @@ LaneDetector::LaneDetector() :
 	outer_threshold_v_min = 75, outer_threshold_v_max = 236;
 
 	//Hardcode calibration
-	inner_threshold_h_min = 38, inner_threshold_h_max = 46;
-	inner_threshold_s_min = 138, inner_threshold_s_max = 256;
-	inner_threshold_v_min = 80, inner_threshold_v_max = 153;
+	inner_threshold_h_min = 30, inner_threshold_h_max = 48;
+	inner_threshold_s_min = 31, inner_threshold_s_max = 211;
+	inner_threshold_v_min = 121, inner_threshold_v_max = 256;
 
         outer_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
 	outter_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
@@ -92,9 +92,10 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 	}  
 }
 
-#define SLOPE_DIFFERENCE_MARGIN 0.1
+#define ANGLE_DIFF 1.0
+#define rad_to_deg(theta) (theta * 57.29557795)
 
-void calculate_best_fit_slope(vector<Vec4i>& lines, double& slope_max, double& slope_min, double& slope_best, vector<double>& slope_list)
+void calculate_best_fit_slope(vector<Vec4i>& lines, double& angle_max, double& angle_min, double& angle_best, vector<double>& angle_list)
 {
 	if(lines.size() == 0) {
 		return;
@@ -104,15 +105,12 @@ void calculate_best_fit_slope(vector<Vec4i>& lines, double& slope_max, double& s
 
 	double x = (double)line[2] - line[0];
 	double y = (double)line[3] - line[1];
-	double mag = sqrt(x * x + y * y);
-	x /= mag;
-	y /= mag;
-	double slope = y / x;
+	double angle = rad_to_deg(asin(y / x));
 
-	slope_max = slope_min = slope;
+	angle_max = angle_min = angle;
 
-	slope_list.clear();
-	slope_list.push_back(slope);
+	angle_list.clear();
+	angle_list.push_back(angle);
 
 	//Create slope list & fine max / min slope
 	for(size_t i = 1; i < lines.size(); i++) {
@@ -121,30 +119,26 @@ void calculate_best_fit_slope(vector<Vec4i>& lines, double& slope_max, double& s
 		//Calculate the ratio of x and y
 		x = (double)line[2] - line[0];
 		y = (double)line[3] - line[1];
-		mag = sqrt(x * x + y * y);
-		x /= mag;
-		y /= mag;
-		slope = y / x;
 
-		slope_list.push_back(slope);
+		angle = rad_to_deg(asin(y / x));
 
-		ROS_INFO("(%lf, %lf)[SLOPE]%lf - mag %lf", x, y, slope, mag);
+		angle_list.push_back(angle);
 
-		if(slope > slope_max) {
-			slope_max = slope;
-		} else if(slope < slope_min) {
-			slope_min = slope;
+		if(angle > angle_max) {
+			angle_max = angle;
+		} else if(angle < angle_min) {
+			angle_min = angle;
 		}
 	}
 
 	int max_fit_count = 0;
-	double test_slope = slope_min;
-#if 0
+	double test_angle = angle_min;
+
 	//RANSAC
 	do {
 		int fit_count = 0;
 		for(size_t i = 0; i < lines.size(); i++) {
-			if(abs(test_slope - slope_list[i]) < SLOPE_DIFFERENCE_MARGIN) {
+			if(abs(test_angle - angle_list[i]) < ANGLE_DIFF) {
 				fit_count++;
 			}
 		}
@@ -152,12 +146,11 @@ void calculate_best_fit_slope(vector<Vec4i>& lines, double& slope_max, double& s
 		//Find new best fit slope
 		if(fit_count > max_fit_count) {
 			max_fit_count = fit_count;
-			slope_best = test_slope;
+			angle_best = test_angle;
 		}
 
-		test_slope += SLOPE_DIFFERENCE_MARGIN;
-	} while(test_slope <= slope_max);
-#endif
+		test_angle += ANGLE_DIFF;
+	} while(test_angle <= angle_max);
 }
 
 void LaneDetector::lane_detect(cv::Mat& raw_image)
@@ -182,20 +175,25 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 	cv::Canny(outer_threshold_image, outer_canny_image, 100, 200, 3);
 	cv::Canny(inner_threshold_image, inner_canny_image, 100, 200, 3);
 
-	vector<Vec4i> outter_lines, inner_lines;
-	cv::HoughLinesP(outer_canny_image, outter_lines, 1, CV_PI / 180, 80, 50, 10);	
+	vector<Vec4i> outer_lines, inner_lines;
+	cv::HoughLinesP(outer_canny_image, outer_lines, 1, CV_PI / 180, 80, 50, 10);	
 	cv::HoughLinesP(inner_canny_image, inner_lines, 1, CV_PI / 180, 80, 50, 10);	
 
 	raw_image.copyTo(lane_mark_image);
-	mark_lane(lane_mark_image, outter_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
+	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(0, 80, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 
-	double slope_max, slope_min, slope_best;
-	vector<double> slope_list;
+	double outer_angle_max, outer_angle_min, outer_angle_best = 0;
+	double inner_angle_max, inner_angle_min, inner_angle_best = 0;
+	vector<double> outer_angle_list, inner_angle_list;
 
-	calculate_best_fit_slope(inner_lines, slope_max, slope_min, slope_best, slope_list);
+	calculate_best_fit_slope(outer_lines, outer_angle_max, outer_angle_min, outer_angle_best, outer_angle_list);
+	calculate_best_fit_slope(inner_lines, inner_angle_max, inner_angle_min, inner_angle_best, inner_angle_list);
 
-	//ROS_INFO("[INNER LINE]RANSAC best slope: %lf", slope_best);
+	ROS_INFO("[OUTER LINE]RANSAC best angle: %lf", outer_angle_best);
+	ROS_INFO("[INNER LINE]RANSAC best angle: %lf", inner_angle_best);
+
+	double drive_angle = (outer_angle_best + inner_angle_best) / 2;
 
 	//Calibration
 	if(tune_outter_road || tune_inner_road) {
