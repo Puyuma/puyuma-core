@@ -92,6 +92,74 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 	}  
 }
 
+#define SLOPE_DIFFERENCE_MARGIN 0.1
+
+void calculate_best_fit_slope(vector<Vec4i>& lines, double& slope_max, double& slope_min, double& slope_best, vector<double>& slope_list)
+{
+	if(lines.size() == 0) {
+		return;
+	}
+
+	Vec4i line = lines[0];
+
+	double x = (double)line[2] - line[0];
+	double y = (double)line[3] - line[1];
+	double mag = sqrt(x * x + y * y);
+	x /= mag;
+	y /= mag;
+	double slope = y / x;
+
+	slope_max = slope_min = slope;
+
+	slope_list.clear();
+	slope_list.push_back(slope);
+
+	//Create slope list & fine max / min slope
+	for(size_t i = 1; i < lines.size(); i++) {
+		line = lines[i];
+
+		//Calculate the ratio of x and y
+		x = (double)line[2] - line[0];
+		y = (double)line[3] - line[1];
+		mag = sqrt(x * x + y * y);
+		x /= mag;
+		y /= mag;
+		slope = y / x;
+
+		slope_list.push_back(slope);
+
+		ROS_INFO("(%lf, %lf)[SLOPE]%lf - mag %lf", x, y, slope, mag);
+
+		if(slope > slope_max) {
+			slope_max = slope;
+		} else if(slope < slope_min) {
+			slope_min = slope;
+		}
+	}
+
+	int max_fit_count = 0;
+	double test_slope = slope_min;
+#if 0
+	//RANSAC
+	do {
+		int fit_count = 0;
+		for(size_t i = 0; i < lines.size(); i++) {
+			if(abs(test_slope - slope_list[i]) < SLOPE_DIFFERENCE_MARGIN) {
+				fit_count++;
+			}
+		}
+
+		//Find new best fit slope
+		if(fit_count > max_fit_count) {
+			max_fit_count = fit_count;
+			slope_best = test_slope;
+		}
+
+		test_slope += SLOPE_DIFFERENCE_MARGIN;
+	} while(test_slope <= slope_max);
+#endif
+}
+
 void LaneDetector::lane_detect(cv::Mat& raw_image)
 {
 	cv::cvtColor(raw_image, outer_hsv_image, COLOR_BGR2HSV);
@@ -121,6 +189,13 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 	raw_image.copyTo(lane_mark_image);
 	mark_lane(lane_mark_image, outter_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(0, 80, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
+
+	double slope_max, slope_min, slope_best;
+	vector<double> slope_list;
+
+	calculate_best_fit_slope(inner_lines, slope_max, slope_min, slope_best, slope_list);
+
+	//ROS_INFO("[INNER LINE]RANSAC best slope: %lf", slope_best);
 
 	//Calibration
 	if(tune_outter_road || tune_inner_road) {
