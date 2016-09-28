@@ -20,12 +20,15 @@ generate_messages(DEPENDENCIES std_msgs)
 set(
     XENOBOT_INC
     ./camera
+    ./camera/motor_driver
 )
 
 set(
     XENOBOT_SRC
     ./camera/main.cpp
     ./camera/lane_detector.cpp
+    ./camera/controller.cpp
+    ./camera/motor_driver/gnublin.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})
