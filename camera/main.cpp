@@ -16,7 +16,7 @@ using namespace cv;
 int main(int argc, char* argv[])
 {
 	/* ROS initialization */
-	ros::init(argc, argv, "realtime_duckie");
+	ros::init(argc, argv, "xenobot");
         ros::Time::init();
 	ros::NodeHandle nh;
         ros::Rate loop_rate(30);
@@ -24,16 +24,16 @@ int main(int argc, char* argv[])
 	ros::NodeHandle node;
 
 	ros::Publisher raw_image_publisher = 
-		node.advertise<sensor_msgs::Image>("realtime_duckie/raw_image", 1000);
+		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 1000);
 	ros::Publisher distort_image_publisher = 
-		node.advertise<sensor_msgs::Image>("realtime_duckie/distort_image", 1000);
+		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 1000);
 
 	/* Setup Raspicam */
 	raspicam::RaspiCam_Cv camera;
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
 	camera.set(CV_CAP_PROP_FRAME_WIDTH, 320);
 	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
-	camera.set(CV_CAP_PROP_EXPOSURE, -1);
+	camera.set(CV_CAP_PROP_EXPOSURE, 100);
 
 	if(!camera.open()) {
 		ROS_INFO("failed to open pi camera!\n");
@@ -43,6 +43,7 @@ int main(int argc, char* argv[])
         cv::Mat frame;
 
 	LaneDetector lane_detector;
+	lane_detector.tune_hsv_thresholding();
 
 	while(1) {
 		camera.grab();
@@ -60,7 +61,8 @@ int main(int argc, char* argv[])
 		raw_image_publisher.publish(raw_img_msg);
 		distort_image_publisher.publish(distort_img_msg);
 
-		lane_detector.lane_detect(frame);
+		lane_detector.lane_detect(distort_image);
+		lane_detector.publish_images();
 
 		//cv::imshow("pi camera", distort_image);
 

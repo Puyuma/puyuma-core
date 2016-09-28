@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(realtime_duckie)
+project(xenobot)
 
 find_package(
     catkin REQUIRED COMPONENTS
@@ -18,15 +18,16 @@ generate_messages(DEPENDENCIES std_msgs)
 #Object tracker
 
 set(
-    OBJECT_TRACKING_INC
+    XENOBOT_INC
     ./camera
 )
 
 set(
-    OBJECT_TRACKING_SRC
+    XENOBOT_SRC
     ./camera/main.cpp
+    ./camera/lane_detector.cpp
 )
 
-include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${OBJECT_TRACKING_INC})
-add_executable(camera_node ${OBJECT_TRACKING_SRC})
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})
+add_executable(camera_node ${XENOBOT_SRC})
 target_link_libraries (camera_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)

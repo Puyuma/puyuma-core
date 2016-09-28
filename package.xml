@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>realtime_duckie</name>
+  <name>xenobot</name>
   <version>0.0.1</version>
   <description>HSV color based object tracking package</description>
 
