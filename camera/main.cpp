@@ -31,8 +31,8 @@ int main(int argc, char* argv[])
 	/* Setup Raspicam */
 	raspicam::RaspiCam_Cv camera;
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_FRAME_WIDTH, 320);
-	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+	camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
+	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
 	camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
 	camera.set(CV_CAP_PROP_CONTRAST, 50);
 	camera.set(CV_CAP_PROP_SATURATION, 50);
@@ -56,8 +56,8 @@ int main(int argc, char* argv[])
 		camera.grab();
 		camera.retrieve(frame);
 
-		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 137.738809, 0.000000, 168.051971, 0.000000, 137.673367, 102.337151, 0.000000, 0.000000, 1.000000);
-		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) << -0.255694, 0.039229, 0.001029, -0.002089, 0.000000);
+		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 279.087996, 0.000000, 329.895256, 0.000000, 278.852468, 189.532203, 0.000000, 0.000000, 1.000000);
+		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) << -0.275519, 0.051598, 0.003164, -0.000453, 0.000000);
 
 		cv::Mat distort_image;
 		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);
