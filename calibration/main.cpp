@@ -128,6 +128,8 @@ int main(int argc, char* argv[])
 
 	while(1) {
 		waitKey(1);
+
+		ros::spinOnce();
 	}
 
 	return 0;
