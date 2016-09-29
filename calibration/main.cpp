@@ -2,63 +2,126 @@
 #include <string>
 #include <iostream>
 
-#include <highgui.h>
-#include <cv.h>
+#include "ros/ros.h"
+
+#include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <raspicam/raspicam_cv.h>
-#include <yaml-cpp/yaml.h>
-#include <ros/ros.h>
+#include <xenobot/threshold_setting.h>
+
+#include "setting.h"
 
 using namespace cv;
+
+ros::Publisher threshold_setting_pub;
+
+cv::Mat outer_threshold_image;
+cv::Mat inner_threshold_image;
+cv::Mat marked_image;
+
+int h_min_threshold = FINE_CALIBRATED_H_MIN;
+int h_max_threshold = FINE_CALIBRATED_H_MAX;
+int s_min_threshold = FINE_CALIBRATED_S_MIN;
+int s_max_threshold = FINE_CALIBRATED_S_MAX;
+int v_min_threshold = FINE_CALIBRATED_V_MIN;
+int v_max_threshold = FINE_CALIBRATED_V_MAX;
+
+void on_trackbar(int, void *)
+{
+	xenobot::threshold_setting setting_msg;
+
+	setting_msg.outer_h_min = h_min_threshold;
+	setting_msg.outer_h_max = h_max_threshold;
+	setting_msg.outer_s_min = s_min_threshold;
+	setting_msg.outer_s_max = s_max_threshold;
+	setting_msg.outer_v_min = v_min_threshold;
+	setting_msg.outer_v_max = v_max_threshold;
+
+	setting_msg.inner_h_min = h_min_threshold;
+	setting_msg.inner_h_max = h_max_threshold;
+	setting_msg.inner_s_min = s_min_threshold;
+	setting_msg.inner_s_max = s_max_threshold;
+	setting_msg.inner_v_min = v_min_threshold;
+	setting_msg.inner_v_max = v_max_threshold;
+
+	threshold_setting_pub.publish(setting_msg);
+}
+
+void create_trackbars()
+{
+	//create window for trackbars
+	namedWindow("Threshold setting", 0);
+	
+	//create trackbars and insert them into window
+	createTrackbar("H_MIN", "Threshold setting", &h_min_threshold, 256, on_trackbar);
+	createTrackbar("H_MAX", "Threshold setting", &h_max_threshold, 256, on_trackbar);
+	createTrackbar("S_MIN", "Threshold setting", &s_min_threshold, 256, on_trackbar);
+	createTrackbar("S_MAX", "Threshold setting", &s_max_threshold, 256, on_trackbar);
+	createTrackbar("V_MIN", "Threshold setting", &v_min_threshold, 256, on_trackbar);
+	createTrackbar("V_MAX", "Threshold setting", &v_max_threshold, 256, on_trackbar);
+
+	createTrackbar("H_MIN", "Threshold setting", &h_min_threshold, 256, on_trackbar);
+	createTrackbar("H_MAX", "Threshold setting", &h_max_threshold, 256, on_trackbar);
+	createTrackbar("S_MIN", "Threshold setting", &s_min_threshold, 256, on_trackbar);
+	createTrackbar("S_MAX", "Threshold setting", &s_max_threshold, 256, on_trackbar);
+	createTrackbar("V_MIN", "Threshold setting", &v_min_threshold, 256, on_trackbar);
+	createTrackbar("V_MAX", "Threshold setting", &v_max_threshold, 256, on_trackbar);
+}
+
+void marked_image_callback(const sensor_msgs::Image& new_image_msg)
+{
+	cv_bridge::CvImageConstPtr cv_ptr;
+	cv_ptr = cv_bridge::toCvCopy(new_image_msg, "8UC3");
+
+	marked_image = cv_ptr->image;
+
+	cv::imshow("Threshold setting", marked_image);
+}
+
+void outer_threshold_image_callback(const sensor_msgs::Image& new_image_msg)
+{
+	cv_bridge::CvImageConstPtr cv_ptr;
+	cv_ptr = cv_bridge::toCvCopy(new_image_msg, "8UC1");
+
+	outer_threshold_image = cv_ptr->image;
+
+	cv::imshow("Threshold setting", outer_threshold_image);
+}
+
+void inner_threshold_image_callback(const sensor_msgs::Image& new_image_msg)
+{
+	cv_bridge::CvImageConstPtr cv_ptr;
+	cv_ptr = cv_bridge::toCvCopy(new_image_msg, "8UC1");
+
+	inner_threshold_image = cv_ptr->image;
+
+	cv::imshow("Threshold setting", inner_threshold_image);
+}
 
 int main(int argc, char* argv[])
 {
 	/* ROS initialization */
-	ros::init(argc, argv, "realtime_duckie");
+	ros::init(argc, argv, "calibration_panel");
         ros::Time::init();
-	ros::NodeHandle nh;
-        ros::Rate loop_rate(30);
+        ros::Rate loop_rate(1);
 
 	ros::NodeHandle node;
 
-	ros::Publisher raw_image_publisher = 
-		node.advertise<sensor_msgs::Image>("realtime_duckie/raw_image", 1000);
-	ros::Publisher distort_image_publisher = 
-		node.advertise<sensor_msgs::Image>("realtime_duckie/distort_image", 1000);
+	threshold_setting_pub =
+		node.advertise<xenobot::threshold_setting>("/calibration/threshold_setting", 1000);
 
-	/* Setup Raspicam */
-	raspicam::RaspiCam_Cv camera;
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_FRAME_WIDTH, 320);
-	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
-	camera.set(CV_CAP_PROP_EXPOSURE, -1);
+	ros::Subscriber marked_image_sub =
+                node.subscribe("/xenobot/marked_image", 1000, marked_image_callback);
 
-	if(!camera.open()) {
-		ROS_INFO("failed to open pi camera!\n");
-		return 0;
-	}
+	ros::Subscriber outer_threshold_image_sub =
+                node.subscribe("/xenobot/outer_threshold_image", 1000, outer_threshold_image_callback);
 
-        cv::Mat frame;
+	ros::Subscriber inner_threshold_image_sub =
+                node.subscribe("/xenobot/inner_threshold_image", 1000, inner_threshold_image_callback);
+
+	create_trackbars();
 
 	while(1) {
-		camera.grab();
-		camera.retrieve(frame);
-
-		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 137.738809, 0.000000, 168.051971, 0.000000, 137.673367, 102.337151, 0.000000, 0.000000, 1.000000);
-		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) << -0.255694, 0.039229, 0.001029, -0.002089, 0.000000);
-
-		cv::Mat distort_image;
-		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);
-
-		sensor_msgs::ImagePtr raw_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
-		sensor_msgs::ImagePtr distort_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", distort_image).toImageMsg();
-
-		raw_image_publisher.publish(raw_img_msg);
-		distort_image_publisher.publish(distort_img_msg);
-
-		//cv::imshow("pi camera", distort_image);
-
-		ros::spinOnce();
+		waitKey(1);
 	}
 
 	return 0;

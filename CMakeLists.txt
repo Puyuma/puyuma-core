@@ -12,7 +12,29 @@ find_package(
  
 find_package(OpenCV REQUIRED)
 
+add_message_files(
+    FILES
+    threshold_setting.msg
+)
+
 generate_messages(DEPENDENCIES std_msgs)
+
+########################################################################################
+#Calibration panel
+
+set(
+    CALIBRATION_INC
+    ./calibration
+)
+
+set(
+    CALIBRATION_SRC
+    ./calibration/main.cpp
+)
+
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CALIBRATION__INC})
+add_executable(calibration_panel ${CALIBRATION_SRC})
+target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
 
 ########################################################################################
 #Object tracker
