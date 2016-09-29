@@ -32,9 +32,14 @@ class LaneDetector {
 	public:
 	LaneDetector();
 
-	void tune_hsv_thresholding();
 	void lane_detect(cv::Mat& image);
 	void publish_images();
+	void set_hsv(
+	       double outer_h_max, double outer_h_min, double outer_s_max,
+	       double outer_s_min, double outer_v_max, double outer_v_min,
+	       double inner_h_max, double inner_h_min, double inner_s_max,
+	       double inner_s_min, double inner_v_max, double inner_v_min
+	);
 };
 
 #endif

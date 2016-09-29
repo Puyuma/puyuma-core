@@ -9,9 +9,30 @@
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
 
+#include <xenobot/threshold_setting.h>
 #include "lane_detector.hpp"
 
 using namespace cv;
+
+LaneDetector* lane_detector;
+
+void threshold_setting_callback(const xenobot::threshold_setting& threshold_setting_msg)
+{
+	lane_detector->set_hsv(
+		threshold_setting_msg.outer_h_max,
+		threshold_setting_msg.outer_h_min,
+		threshold_setting_msg.outer_s_max,
+		threshold_setting_msg.outer_s_min,
+		threshold_setting_msg.outer_v_max,
+		threshold_setting_msg.outer_v_min,
+		threshold_setting_msg.inner_h_max,
+		threshold_setting_msg.inner_h_min,
+		threshold_setting_msg.inner_s_max,
+		threshold_setting_msg.inner_s_min,
+		threshold_setting_msg.inner_v_max,
+		threshold_setting_msg.inner_v_min
+	);
+}
 
 int main(int argc, char* argv[])
 {
@@ -27,6 +48,9 @@ int main(int argc, char* argv[])
 		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 1000);
 	ros::Publisher distort_image_publisher = 
 		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 1000);
+
+	ros::Subscriber threshold_setting_subscriber =
+		node.subscribe("/xenobot/calibration/threshold_setting", 1000, threshold_setting_callback);
 
 	/* Setup Raspicam */
 	raspicam::RaspiCam_Cv camera;
@@ -49,8 +73,7 @@ int main(int argc, char* argv[])
 
         cv::Mat frame;
 
-	LaneDetector lane_detector;
-	lane_detector.tune_hsv_thresholding();
+	lane_detector = new LaneDetector();
 
 	while(1) {
 		camera.grab();
@@ -68,8 +91,8 @@ int main(int argc, char* argv[])
 		raw_image_publisher.publish(raw_img_msg);
 		distort_image_publisher.publish(distort_img_msg);
 
-		lane_detector.lane_detect(distort_image);
-		lane_detector.publish_images();
+		lane_detector->lane_detect(distort_image);
+		lane_detector->publish_images();
 
 		//cv::imshow("pi camera", distort_image);
 

@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
 	ros::NodeHandle node;
 
 	threshold_setting_pub =
-		node.advertise<xenobot::threshold_setting>("/calibration/threshold_setting", 1000);
+		node.advertise<xenobot::threshold_setting>("/xenobot/calibration/threshold_setting", 1000);
 
 	ros::Subscriber marked_image_sub =
                 node.subscribe("/xenobot/marked_image", 1000, marked_image_callback);

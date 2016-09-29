@@ -6,9 +6,6 @@
 
 using namespace cv;
 
-bool tune_outter_road = true;
-bool tune_inner_road = true;
-
 void on_trackbar(int, void *)
 {
 }
@@ -58,30 +55,25 @@ void LaneDetector::publish_images()
 	marked_image_publisher.publish(img_msg);
 }
 
-void LaneDetector::tune_hsv_thresholding()
+void LaneDetector::set_hsv(
+	double outer_h_max, double outer_h_min, double outer_s_max,
+	double outer_s_min, double outer_v_max, double outer_v_min,
+	double inner_h_max, double inner_h_min, double inner_s_max,
+	double inner_s_min, double inner_v_max, double inner_v_min)
 {
-	//create window for trackbars
-	namedWindow("tune hsv", 0);
-	
-	if(tune_outter_road == true) {
+	outer_threshold_h_min = outer_h_min;
+	outer_threshold_h_max = outer_h_max;
+	outer_threshold_s_min = outer_s_min;
+	outer_threshold_s_max = outer_s_max;
+	outer_threshold_v_min = outer_v_min;
+	outer_threshold_v_max = outer_v_max;
 
-	//create trackbars and insert them into window
-		createTrackbar("outer H_MIN", "tune hsv", &outer_threshold_h_min, 256, on_trackbar);
-		createTrackbar("outer H_MAX", "tune hsv", &outer_threshold_h_max, 256, on_trackbar);
-		createTrackbar("outer S_MIN", "tune hsv", &outer_threshold_s_min, 256, on_trackbar);
-		createTrackbar("outer S_MAX", "tune hsv", &outer_threshold_s_max, 256, on_trackbar);
-		createTrackbar("outer V_MIN", "tune hsv", &outer_threshold_v_min, 256, on_trackbar);
-		createTrackbar("outer V_MAX", "tune hsv", &outer_threshold_v_max, 256, on_trackbar);
-	}
-
-	if(tune_inner_road == true) {
-		createTrackbar("inner H_MIN", "tune hsv", &inner_threshold_h_min, 256, on_trackbar);
-		createTrackbar("inner H_MAX", "tune hsv", &inner_threshold_h_max, 256, on_trackbar);
-		createTrackbar("inner S_MIN", "tune hsv", &inner_threshold_s_min, 256, on_trackbar);
-		createTrackbar("inner S_MAX", "tune hsv", &inner_threshold_s_max, 256, on_trackbar);
-		createTrackbar("inner V_MIN", "tune hsv", &inner_threshold_v_min, 256, on_trackbar);
-		createTrackbar("inner V_MAX", "tune hsv", &inner_threshold_v_max, 256, on_trackbar);
-	}
+	inner_threshold_h_min = inner_h_min;
+	inner_threshold_h_max = inner_h_max;
+	inner_threshold_s_min = inner_s_min;
+	inner_threshold_s_max = inner_s_max;
+	inner_threshold_v_min = inner_v_min;
+	inner_threshold_v_max = inner_v_max;
 }
 
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
@@ -194,11 +186,6 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 	ROS_INFO("[INNER LINE]RANSAC best angle: %lf", inner_angle_best);
 
 	double drive_angle = (outer_angle_best + inner_angle_best) / 2;
-
-	//Calibration
-	if(tune_outter_road || tune_inner_road) {
-		cvWaitKey(1);
-	}
 
 #if 0
 	cv::imshow("outter canny image", outer_canny_image);
