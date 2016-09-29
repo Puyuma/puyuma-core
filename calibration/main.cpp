@@ -74,9 +74,9 @@ void marked_image_callback(const sensor_msgs::Image& new_image_msg)
 
 	marked_image = cv_ptr->image;
 
-	cv::imshow("Threshold setting", marked_image);
+	cv::imshow("Lane marked image", marked_image);
 
-	ROS_INFO("Received marked image");
+	//ROS_INFO("Received marked image");
 }
 
 void outer_threshold_image_callback(const sensor_msgs::Image& new_image_msg)
@@ -86,9 +86,9 @@ void outer_threshold_image_callback(const sensor_msgs::Image& new_image_msg)
 
 	outer_threshold_image = cv_ptr->image;
 
-	cv::imshow("Threshold setting", outer_threshold_image);
+	cv::imshow("Outer threshold image", outer_threshold_image);
 
-	ROS_INFO("Received outer threshold image");
+	//ROS_INFO("Received outer threshold image");
 }
 
 void inner_threshold_image_callback(const sensor_msgs::Image& new_image_msg)
@@ -98,9 +98,9 @@ void inner_threshold_image_callback(const sensor_msgs::Image& new_image_msg)
 
 	inner_threshold_image = cv_ptr->image;
 
-	cv::imshow("Threshold setting", inner_threshold_image);
+	cv::imshow("Inner threshold image", inner_threshold_image);
 
-	ROS_INFO("Received inner threshold image");
+	//ROS_INFO("Received inner threshold image");
 }
 
 int main(int argc, char* argv[])
