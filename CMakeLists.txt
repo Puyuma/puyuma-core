@@ -9,6 +9,8 @@ find_package(
     roscpp
     genmsg
 )
+
+find_package(Curses REQUIRED)
  
 find_package(OpenCV REQUIRED)
 
@@ -49,9 +51,9 @@ set(
     ./calibration/main.cpp
 )
 
-include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${JOYSTICk_INC})
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR} ${JOYSTICk_INC})
 add_executable(calibration_panel ${JOYSTICK_SRC})
-target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
+target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} ${CURSES_LIBRARIES} yaml-cpp raspicam_cv)
 
 ########################################################################################
 #Object tracker

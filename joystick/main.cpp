@@ -1,12 +1,5 @@
 #include <iostream>
-#include <stdio.h>
-
 #include <ros/ros.h>
-
-#define KEY_UP    72
-#define KEY_DOWN  80
-#define KEY_LEFT  75
-#define KEY_RIGHT 77
 
 using namespace std;
 
@@ -15,32 +8,41 @@ int main(int argc, char* argv[])
 	/* ROS initialization */
 	ros::init(argc, argv, "xenobot");
 	ros::Time::init();
-	//ros::Rate loop_rate(1000);
+	ros::Rate loop_rate(1000);
 
-	char key;
+	initscr();
+	cbreak;
+
+	char c;
 
 	ROS_INFO("Joystick start:");
 
 	while(1) {
-		//key = getch();
+		c = getch();
 
-		switch(key) {
-		case KEY_UP:
+		switch(c) {
+		case 'w':
+		case 'W':
 			ROS_INFO("KEY_UP");
 			break;
-		case KEY_DOWN:
+		case 's':
+		case 'S':
 			ROS_INFO("KEY_DOWN");
 			break;
-		case KEY_LEFT:
+		case 'a':
+		case 'A':
 			ROS_INFO("KEY_LEFT");
 			break;
-		case KEY_RIGHT:
+		case 'd':
+		case 'D':
 			ROS_INFO("KEY_RIGHT");
 			break;
+		default:
+			ROS_INFO("%c", c);
 		}
-
-		ros::spinOnce();
 	}
+
+	endwin();
 
 	return 0;
 }
