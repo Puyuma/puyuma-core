@@ -29,11 +29,28 @@ set(
 
 set(
     CALIBRATION_SRC
+    ./joystick/main.cpp
+)
+
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CALIBRATION_INC})
+add_executable(joystick ${CALIBRATION_SRC})
+target_link_libraries (joystick ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
+
+########################################################################################
+#JOYSTICK
+
+set(
+    JOYSTICK_INC
+    ./joystick
+)
+
+set(
+    JOYSTICK_SRC
     ./calibration/main.cpp
 )
 
-include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CALIBRATION__INC})
-add_executable(calibration_panel ${CALIBRATION_SRC})
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${JOYSTICk_INC})
+add_executable(calibration_panel ${JOYSTICK_SRC})
 target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
 
 ########################################################################################
@@ -41,18 +58,18 @@ target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES}
 
 set(
     XENOBOT_INC
-    ./camera
-    ./camera/motor_driver
+    ./system
+    ./system/motor_driver
 )
 
 set(
     XENOBOT_SRC
-    ./camera/main.cpp
-    ./camera/lane_detector.cpp
-    ./camera/controller.cpp
-    ./camera/motor_driver/gnublin.cpp
+    ./system/main.cpp
+    ./system/lane_detector.cpp
+    ./system/controller.cpp
+    ./system/motor_driver/gnublin.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})
-add_executable(camera_node ${XENOBOT_SRC})
-target_link_libraries (camera_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
+add_executable(system_node ${XENOBOT_SRC})
+target_link_libraries (system_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
