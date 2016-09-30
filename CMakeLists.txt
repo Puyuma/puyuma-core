@@ -31,12 +31,12 @@ set(
 
 set(
     CALIBRATION_SRC
-    ./joystick/main.cpp
+    ./calibration/main.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CALIBRATION_INC})
-add_executable(joystick ${CALIBRATION_SRC})
-target_link_libraries (joystick ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
+add_executable(calibration_panel ${CALIBRATION_SRC})
+target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
 
 ########################################################################################
 #JOYSTICK
@@ -48,12 +48,12 @@ set(
 
 set(
     JOYSTICK_SRC
-    ./calibration/main.cpp
+    ./joystick/main.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR} ${JOYSTICk_INC})
-add_executable(calibration_panel ${JOYSTICK_SRC})
-target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} ${CURSES_LIBRARIES} yaml-cpp raspicam_cv)
+add_executable(joystick ${JOYSTICK_SRC})
+target_link_libraries (joystick ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} ${CURSES_LIBRARIES} yaml-cpp raspicam_cv)
 
 ########################################################################################
 #Object tracker
