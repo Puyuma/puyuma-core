@@ -1,5 +1,6 @@
 #include <iostream>
 #include <ros/ros.h>
+#include <curses.h>
 
 using namespace std;
 
@@ -15,30 +16,30 @@ int main(int argc, char* argv[])
 
 	char c;
 
-	ROS_INFO("Joystick start:");
-
 	while(1) {
-		c = getch();
+		if(getch() != 27) {
+			cout << "\e[1;1H\e[2J";
+			ROS_INFO("Press arrow key to drive the car");
+			continue;
+		}
 
-		switch(c) {
-		case 'w':
-		case 'W':
-			ROS_INFO("KEY_UP");
-			break;
-		case 's':
-		case 'S':
-			ROS_INFO("KEY_DOWN");
-			break;
-		case 'a':
+		cout << "\e[1;1H\e[2J";
+
+		getch();
+
+		switch(c = getch()) {
 		case 'A':
-			ROS_INFO("KEY_LEFT");
+			ROS_INFO("KEY_UP\r");
 			break;
-		case 'd':
+		case 'B':
+			ROS_INFO("KEY_DOWN\r");
+			break;
+		case 'C':
+			ROS_INFO("KEY_LEFT\r");
+			break;
 		case 'D':
-			ROS_INFO("KEY_RIGHT");
+			ROS_INFO("KEY_RIGHT\r");
 			break;
-		default:
-			ROS_INFO("%c", c);
 		}
 	}
 
