@@ -77,7 +77,6 @@ int main(int argc, char* argv[])
 	lane_detector = new LaneDetector();
 
 	motor_init();
-	test_motor();
 
 	while(1) {
 		camera.grab();

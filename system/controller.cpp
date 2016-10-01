@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <wiringPi.h>
+#include <softPwm.h>
 
 #define L298N_IN1 0
 #define L298N_IN2 1
@@ -17,16 +18,23 @@ void motor_init()
 	pinMode(L298N_IN2, OUTPUT);  //GPIO18 -> L298N IN2
 	pinMode(L298N_IN1, OUTPUT);  //GPIO17 -> L298N IN1
 
-	digitalWrite(L298N_IN4, LOW);
+	softPwmCreate(L298N_IN2, 0, 100);
+	softPwmCreate(L298N_IN4, 0, 100);
+
+	//digitalWrite(L298N_IN4, LOW);
 	digitalWrite(L298N_IN3, LOW);
-	digitalWrite(L298N_IN2, LOW);
+	//digitalWrite(L298N_IN2, LOW);
 	digitalWrite(L298N_IN1, LOW);
 }
 
 void test_motor()
 {
 	digitalWrite(L298N_IN1, LOW);
-	digitalWrite(L298N_IN2, HIGH);
+	//digitalWrite(L298N_IN2, HIGH);
+	softPwmWrite(L298N_IN2, 100);
+
 	digitalWrite(L298N_IN3, LOW);
-	digitalWrite(L298N_IN4, HIGH);
+	//digitalWrite(L298N_IN4, HIGH);
+	softPwmWrite(L298N_IN4, 100);
+
 }
