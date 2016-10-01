@@ -106,7 +106,7 @@ void inner_threshold_image_callback(const sensor_msgs::Image& new_image_msg)
 int main(int argc, char* argv[])
 {
 	/* ROS initialization */
-	ros::init(argc, argv, "calibration_panel");
+	ros::init(argc, argv, "xenobot_calibration_panel");
         ros::Time::init();
         ros::Rate loop_rate(1);
 

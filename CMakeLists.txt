@@ -16,6 +16,7 @@ find_package(OpenCV REQUIRED)
 add_message_files(
     FILES
     threshold_setting.msg
+    wheel_command.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs)

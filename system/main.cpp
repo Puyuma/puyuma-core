@@ -10,12 +10,27 @@
 #include <ros/ros.h>
 
 #include <xenobot/threshold_setting.h>
+#include <xenobot/wheel_command.h>
 #include "lane_detector.hpp"
 #include "controller.hpp"
 
 using namespace cv;
 
 LaneDetector* lane_detector;
+
+//Joystick
+bool joystick_triggered;
+ros::Time joystick_trigger_time;
+
+void handle_joystick()
+{
+	if(joystick_triggered == true) {
+		if((ros::Time::now().toSec() - joystick_trigger_time.toSec()) > 0.2) {
+			joystick_triggered = false;
+			set_motor_pwm(0, 0);
+		}
+	}
+}
 
 void threshold_setting_callback(const xenobot::threshold_setting& threshold_setting_msg)
 {
@@ -35,6 +50,14 @@ void threshold_setting_callback(const xenobot::threshold_setting& threshold_sett
 	);
 }
 
+void wheel_command_callback(const xenobot::wheel_command& wheel_msg)
+{
+	set_motor_pwm(wheel_msg.left_pwm, wheel_msg.right_pwm);
+
+	joystick_triggered = true;
+	ros::Time joystick_trigger_time = ros::Time::now();
+}
+
 int main(int argc, char* argv[])
 {
 	/* ROS initialization */
@@ -52,6 +75,8 @@ int main(int argc, char* argv[])
 
 	ros::Subscriber threshold_setting_subscriber =
 		node.subscribe("/xenobot/calibration/threshold_setting", 1000, threshold_setting_callback);
+	ros::Subscriber wheel_command_subscriber =
+		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
 
 	/* Setup Raspicam */
 	raspicam::RaspiCam_Cv camera;
@@ -99,6 +124,7 @@ int main(int argc, char* argv[])
 
 		//cv::imshow("pi camera", distort_image);
 
+		handle_joystick();
 		ros::spinOnce();
 	}
 
