@@ -1,16 +1,16 @@
-#include "gnublin.h"
+#include <wiringPi.h>
 
 void test_motor()
 {
-	gnublin_gpio motor;
+	wiringPiSetup() ;
 
-	motor.pinMode(12, OUTPUT);
-	motor.pinMode(6, OUTPUT);
-	motor.pinMode(18, OUTPUT);
-	motor.pinMode(17, OUTPUT);
+	pinMode(12, OUTPUT);
+	pinMode(6, OUTPUT);
+	pinMode(18, OUTPUT);
+	pinMode(17, OUTPUT);
 
-	motor.digitalWrite(12, HIGH);
-	motor.digitalWrite(6, LOW);
-	motor.digitalWrite(18, HIGH);
-	motor.digitalWrite(17, LOW);
+	digitalWrite(12, HIGH);
+	digitalWrite(6, LOW);
+	digitalWrite(18, HIGH);
+	digitalWrite(17, LOW);
 }
