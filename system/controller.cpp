@@ -1,16 +1,32 @@
+#include <stdlib.h>
 #include <wiringPi.h>
+
+#define L298N_IN1 0
+#define L298N_IN2 1
+#define L298N_IN3 22
+#define L298N_IN4 26
+
+void motor_init()
+{
+	setenv("WIRINGPI_GPIOMEM", "1", 1);
+
+	wiringPiSetup() ;
+
+	pinMode(L298N_IN4, OUTPUT); //GPIO12 -> L298N IN4
+	pinMode(L298N_IN3, OUTPUT); //GPIO6  -> L298N IN3
+	pinMode(L298N_IN2, OUTPUT);  //GPIO18 -> L298N IN2
+	pinMode(L298N_IN1, OUTPUT);  //GPIO17 -> L298N IN1
+
+	digitalWrite(L298N_IN4, LOW);
+	digitalWrite(L298N_IN3, LOW);
+	digitalWrite(L298N_IN2, LOW);
+	digitalWrite(L298N_IN1, LOW);
+}
 
 void test_motor()
 {
-	wiringPiSetup() ;
-
-	pinMode(12, OUTPUT);
-	pinMode(6, OUTPUT);
-	pinMode(18, OUTPUT);
-	pinMode(17, OUTPUT);
-
-	digitalWrite(12, HIGH);
-	digitalWrite(6, LOW);
-	digitalWrite(18, HIGH);
-	digitalWrite(17, LOW);
+	digitalWrite(L298N_IN1, LOW);
+	digitalWrite(L298N_IN2, HIGH);
+	digitalWrite(L298N_IN3, LOW);
+	digitalWrite(L298N_IN4, HIGH);
 }

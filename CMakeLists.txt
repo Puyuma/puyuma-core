@@ -12,9 +12,6 @@ find_package(
 
 find_package(Curses REQUIRED)
 find_package(OpenCV REQUIRED)
-#find_package(WiringPi REQUIRED)
-
-#include_directories(${WIRINGPI_INCLUDE_DIRS})
 
 add_message_files(
     FILES
@@ -74,5 +71,5 @@ set(
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})
-add_executable(system_node ${XENOBOT_SRC})
-target_link_libraries (system_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} -lwiringPi yaml-cpp raspicam_cv raspicam)
+add_executable(drive_controller ${XENOBOT_SRC})
+target_link_libraries (drive_controller ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} -lwiringPi yaml-cpp raspicam_cv raspicam)

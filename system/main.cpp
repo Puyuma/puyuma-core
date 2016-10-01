@@ -11,6 +11,7 @@
 
 #include <xenobot/threshold_setting.h>
 #include "lane_detector.hpp"
+#include "controller.hpp"
 
 using namespace cv;
 
@@ -74,6 +75,9 @@ int main(int argc, char* argv[])
         cv::Mat frame;
 
 	lane_detector = new LaneDetector();
+
+	motor_init();
+	test_motor();
 
 	while(1) {
 		camera.grab();
