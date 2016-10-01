@@ -84,67 +84,6 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 	}  
 }
 
-#define ANGLE_DIFF 1.0
-#define rad_to_deg(theta) (theta * 57.29557795)
-
-void calculate_best_fit_slope(vector<Vec4i>& lines, double& angle_max, double& angle_min, double& angle_best, vector<double>& angle_list)
-{
-	if(lines.size() == 0) {
-		return;
-	}
-
-	Vec4i line = lines[0];
-
-	double x = (double)line[2] - line[0];
-	double y = (double)line[3] - line[1];
-	double angle = rad_to_deg(asin(y / x));
-
-	angle_max = angle_min = angle;
-
-	angle_list.clear();
-	angle_list.push_back(angle);
-
-	//Create slope list & fine max / min slope
-	for(size_t i = 1; i < lines.size(); i++) {
-		line = lines[i];
-
-		//Calculate the ratio of x and y
-		x = (double)line[2] - line[0];
-		y = (double)line[3] - line[1];
-
-		angle = rad_to_deg(asin(y / x));
-
-		angle_list.push_back(angle);
-
-		if(angle > angle_max) {
-			angle_max = angle;
-		} else if(angle < angle_min) {
-			angle_min = angle;
-		}
-	}
-
-	int max_fit_count = 0;
-	double test_angle = angle_min;
-
-	//RANSAC
-	do {
-		int fit_count = 0;
-		for(size_t i = 0; i < lines.size(); i++) {
-			if(abs(test_angle - angle_list[i]) < ANGLE_DIFF) {
-				fit_count++;
-			}
-		}
-
-		//Find new best fit slope
-		if(fit_count > max_fit_count) {
-			max_fit_count = fit_count;
-			angle_best = test_angle;
-		}
-
-		test_angle += ANGLE_DIFF;
-	} while(test_angle <= angle_max);
-}
-
 void LaneDetector::lane_detect(cv::Mat& raw_image)
 {
 	cv::cvtColor(raw_image, outer_hsv_image, COLOR_BGR2HSV);
@@ -178,14 +117,6 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 	double outer_angle_max, outer_angle_min, outer_angle_best = 0;
 	double inner_angle_max, inner_angle_min, inner_angle_best = 0;
 	vector<double> outer_angle_list, inner_angle_list;
-
-	calculate_best_fit_slope(outer_lines, outer_angle_max, outer_angle_min, outer_angle_best, outer_angle_list);
-	calculate_best_fit_slope(inner_lines, inner_angle_max, inner_angle_min, inner_angle_best, inner_angle_list);
-
-	ROS_INFO("[OUTER LINE]RANSAC best angle: %lf", outer_angle_best);
-	ROS_INFO("[INNER LINE]RANSAC best angle: %lf", inner_angle_best);
-
-	double drive_angle = (outer_angle_best + inner_angle_best) / 2;
 
 #if 0
 	cv::imshow("outter canny image", outer_canny_image);
