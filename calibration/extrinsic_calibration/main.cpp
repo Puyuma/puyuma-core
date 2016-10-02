@@ -10,8 +10,19 @@
 
 using namespace cv;
 
-bool estimate_homography()
+bool estimate_homography(cv::Mat& rectified_image)
 {
+	std::vector<cv::Point2f> corners;
+
+	int board_w = 7, board_h = 5;
+	cv::Size board_size(board_w, board_h);
+
+	bool found = findChessboardCorners(rectified_image, board_size, corners);
+
+	if(found) {
+		cornerSubPix(rectified_image, corners, cv::Size(11, 11), cv::Size(-1, -1),
+			cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+	}
 }
 
 int main(int argc, char* argv[])
