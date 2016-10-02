@@ -22,21 +22,21 @@ add_message_files(
 generate_messages(DEPENDENCIES std_msgs)
 
 ########################################################################################
-#Calibration panel
+#Color threshold calibration
 
 set(
-    CALIBRATION_INC
-    ./calibration
+    COLOR_THRESHOLD_INC
+    ./calibration/color_threshold
 )
 
 set(
-    CALIBRATION_SRC
-    ./calibration/main.cpp
+    COLOR_THRESHOLD_SRC
+    ./calibration/color_threshold/main.cpp
 )
 
-include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CALIBRATION_INC})
-add_executable(calibration_panel ${CALIBRATION_SRC})
-target_link_libraries (calibration_panel ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${COLOR_THRESHOLD_INC})
+add_executable(color_threshold_calibration ${COLOR_THRESHOLD_SRC})
+target_link_libraries (color_threshold_calibration ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
 
 ########################################################################################
 #JOYSTICK
