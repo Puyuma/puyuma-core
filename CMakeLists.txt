@@ -43,12 +43,12 @@ target_link_libraries (color_threshold_calibration ${OpenCV_LIBRARIES} ${catkin_
 
 set(
     EXTRINSIC_CALIBRATION_INC
-    ./calibration/color_threshold
+    ./calibration/extrinsic_calibration
 )
 
 set(
     EXTRINSIC_CALIBRATION_SRC
-    ./calibration/color_threshold/main.cpp
+    ./calibration/extrinsic_calibration/main.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${EXTRINSIC_CALIBRATION_INC})
