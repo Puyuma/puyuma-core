@@ -39,6 +39,23 @@ add_executable(color_threshold_calibration ${COLOR_THRESHOLD_SRC})
 target_link_libraries (color_threshold_calibration ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
 
 ########################################################################################
+#Extrinsic calibration
+
+set(
+    EXTRINSIC_CALIBRATION_INC
+    ./calibration/color_threshold
+)
+
+set(
+    EXTRINSIC_CALIBRATION_SRC
+    ./calibration/color_threshold/main.cpp
+)
+
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${EXTRINSIC_CALIBRATION_INC})
+add_executable(extrinsic_calibration ${EXTRINSIC_CALIBRATION_SRC})
+target_link_libraries (extrinsic_calibration ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
+
+########################################################################################
 #JOYSTICK
 
 set(
