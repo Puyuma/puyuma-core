@@ -10,6 +10,22 @@
 
 using namespace cv;
 
+void save_homography_matrix(cv::Mat& H)
+{
+	cv::Mat _H;
+	H.copyTo(_H);
+
+	_H.convertTo(_H, CV_32F);
+
+	for(int i = 0; i < 3; i++) {
+		ROS_INFO("[%.5f %.5f %.5f]",
+			_H.at<float>(i, 0),
+			_H.at<float>(i, 1),
+			_H.at<float>(i, 2)
+		);
+	}
+}
+
 void mark_checkboard_corners(cv::Mat& rectified_image, std::vector<cv::Point2f>& corners)
 {
 	cv::Mat marked_image;
@@ -78,7 +94,8 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 
 	for(int row = 0; row < board_h; row++) {
 		for(int column = 0; column < board_w; column++) {
-			ground_plane_points[row * board_w + column] = cv::Point2f(float(column) * 91.428f, float(row) * 96.0f);
+			//ground_plane_points[row * board_w + column] = cv::Point2f(float(column) * 91.428f, float(row) * 96.0f);
+			ground_plane_points[board_w * board_h - (row * board_w + column) - 1] = cv::Point2f(float(column) * 91.428f, float(row) * 96.0f);
 
 			image_plane_points[row * board_w + column] =
 				corners[
@@ -92,12 +109,22 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 
 	H = cv::findHomography(image_plane_points, ground_plane_points, CV_RANSAC);
 
+#if 1
 	cv::Mat test;
 	warpPerspective(rectified_image, test, H, rectified_image.size());
 
 	imshow("ground projection", test);
 
 	waitKey(0);
+
+	cv::destroyWindow("ground projection");
+#endif
+
+	cv::destroyWindow("Extrinsic calibration");
+
+	ROS_INFO("Sucessfully calculated the Homography Matrix:");
+
+	save_homography_matrix(H);
 
 	return true;
 }
@@ -117,7 +144,7 @@ int main(int argc, char* argv[])
 
 	/* Setup Raspicam */
 	raspicam::RaspiCam_Cv camera;
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC1);
+	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
 	camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
 	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
 	//camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
@@ -133,7 +160,7 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-        cv::Mat raw_image, ground_projected_image;
+        cv::Mat raw_image, grey_image, ground_projected_image;
 	cv::Mat H; //Homography matrix
 
 	bool get_H = false;
@@ -149,14 +176,21 @@ int main(int argc, char* argv[])
 		cv::undistort(raw_image, distort_image, camera_matrix, distort_coffecient);
 
 		if(get_H == false) {
-			if(estimate_homography(distort_image, H) == true) {
+			cv::cvtColor(distort_image, grey_image, cv::COLOR_BGR2GRAY);
+
+			if(estimate_homography(grey_image, H) == true) {
 				get_H = true;
 			}
 		} else {
 			warpPerspective(raw_image, ground_projected_image, H, raw_image.size());
+
 			cv::imshow("Homography image", ground_projected_image);
-			waitKey(1);	
 		}
+
+		cv::imshow("Raw image", distort_image);
+
+		waitKey(1);	
+
 
 		//sensor_msgs::ImagePtr homography_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", distort_image).toImageMsg();
 
