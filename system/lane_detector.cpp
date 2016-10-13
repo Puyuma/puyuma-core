@@ -92,11 +92,14 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 		int mid_x = (line[0] + line[2]) / 2;
 		int mid_y = (line[1] + line[3]) / 2;
 
+#if 0
+		/* Ground coordinate estimation */
 		Point3f ground_point = point_transform_image_to_ground(mid_x, mid_y);
 		sprintf(text, "s%d(%f,%f)", i, ground_point.x, ground_point.y);
+		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
+#endif
 
 		cv::line(lane_mark_image, Point(line[0], line[1]), Point(line[2], line[3]), line_color, 3, CV_AA);
-		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
 	}  
 }
 
@@ -117,8 +120,24 @@ Point3f LaneDetector::point_transform_image_to_ground(int pixel_x, int pixel_y)
 	return point_ground;
 }
 
+cv::Mat test_homography_transform(cv::Mat& rectified_image)
+{
+	cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
+					 0.00661, -6.97268, 1599.55896,
+					 0.00007, -0.00868, 1.00000);
+
+	cv::Mat homograhy_image;
+	warpPerspective(rectified_image, homograhy_image, H, rectified_image.size());
+
+	return homograhy_image;
+}
+
 void LaneDetector::lane_detect(cv::Mat& raw_image)
 {
+#if 1
+	raw_image = test_homography_transform(raw_image);
+#endif
+
 	cv::cvtColor(raw_image, outer_hsv_image, COLOR_BGR2HSV);
 	cv::cvtColor(raw_image, inner_hsv_image, COLOR_BGR2HSV);
 
