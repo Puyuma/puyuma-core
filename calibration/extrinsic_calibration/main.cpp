@@ -88,14 +88,14 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 	ground_plane_points.resize(board_w * board_h);
 	image_plane_points.resize(board_w * board_h);
 
-	float x_offset = 0.191f;
-	float y_offset = -0.093f;
+	float x_offset = 0.f;
+	float y_offset = -0.f;
 	cv::Point2f offset= cv::Point2f(x_offset, y_offset);
 
 	for(int row = 0; row < board_h; row++) {
 		for(int column = 0; column < board_w; column++) {
 			//ground_plane_points[row * board_w + column] = cv::Point2f(float(column) * 91.428f, float(row) * 96.0f);
-			ground_plane_points[board_w * board_h - (row * board_w + column) - 1] = cv::Point2f(float(column) * 91.428f, float(row) * 96.0f);
+			ground_plane_points[board_w * board_h - (row * board_w + column) - 1] = cv::Point2f(float(column) * 80.0f + 80, float(row) * 80.0f + 80);
 
 			image_plane_points[row * board_w + column] =
 				corners[
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 				get_H = true;
 			}
 		} else {
-			warpPerspective(raw_image, ground_projected_image, H, raw_image.size());
+			warpPerspective(distort_image, ground_projected_image, H, distort_image.size());
 
 			cv::imshow("Homography image", ground_projected_image);
 		}
