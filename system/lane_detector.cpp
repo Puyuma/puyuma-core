@@ -19,14 +19,20 @@ LaneDetector::LaneDetector() :
 	inner_threshold_v_min(0), inner_threshold_v_max(256)
 {
 	//Hardcode calibration
-	outer_threshold_h_min = 50, outer_threshold_h_max = 256;
-	outer_threshold_s_min = 0, outer_threshold_s_max = 76;
-	outer_threshold_v_min = 75, outer_threshold_v_max = 236;
+	outer_threshold_h_min = 0, outer_threshold_h_max = 119;
+	outer_threshold_s_min = 0, outer_threshold_s_max = 41;
+	outer_threshold_v_min = 126, outer_threshold_v_max = 256;
 
 	//Hardcode calibration
-	inner_threshold_h_min = 30, inner_threshold_h_max = 48;
-	inner_threshold_s_min = 31, inner_threshold_s_max = 211;
-	inner_threshold_v_min = 121, inner_threshold_v_max = 256;
+	inner_threshold_h_min = 0, inner_threshold_h_max = 45;
+	inner_threshold_s_min = 108, inner_threshold_s_max = 256;
+	inner_threshold_v_min = 176, inner_threshold_v_max = 256;
+
+	double homography_array[9] = {4.015384e-05, -0.0002008101, -0.1583213,
+				     0.0008264009, 2.63818e-05, -0.2518232,
+				     5.908231e-05, -0.007253319, 1};
+	H = cv::Mat(3, 3, CV_32F, homography_array);
+	H = H.inv();
 
         outer_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
 	outter_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
@@ -78,10 +84,37 @@ void LaneDetector::set_hsv(
 
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
 {
-	for(size_t i = 0; i < lines.size(); i++) {  
+	char text[20] = {'\0'};
+
+	for(size_t i = 0; i < lines.size(); i++) {
 		Vec4i line = lines[i];
+		
+		int mid_x = (line[0] + line[2]) / 2;
+		int mid_y = (line[1] + line[3]) / 2;
+
+		Point3f ground_point = point_transform_image_to_ground(mid_x, mid_y);
+		sprintf(text, "s%d(%f,%f)", i, ground_point.x, ground_point.y);
+
 		cv::line(lane_mark_image, Point(line[0], line[1]), Point(line[2], line[3]), line_color, 3, CV_AA);
+		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
 	}  
+}
+
+/* Transform point from image plane (pixel) to ground point */
+Point3f LaneDetector::point_transform_image_to_ground(int pixel_x, int pixel_y)
+{
+	cv::Point3f point_image(static_cast<float>(pixel_x), static_cast<float>(pixel_y), 1.0f);
+
+	cv::Mat point_ground_mat = H * cv::Mat(point_image);
+	cv::Point3f point_ground(point_ground_mat);
+
+	ROS_INFO("%f %f %f", point_ground.x, point_ground.y, point_ground.z);
+
+	point_ground.x /= point_ground.z;
+	point_ground.y /= point_ground.z;
+	point_ground.z = 0.0f;
+
+	return point_ground;
 }
 
 void LaneDetector::lane_detect(cv::Mat& raw_image)
@@ -112,7 +145,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 
 	raw_image.copyTo(lane_mark_image);
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
-	mark_lane(lane_mark_image, inner_lines, Scalar(0, 80, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
+	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 
 	double outer_angle_max, outer_angle_min, outer_angle_best = 0;
 	double inner_angle_max, inner_angle_min, inner_angle_best = 0;

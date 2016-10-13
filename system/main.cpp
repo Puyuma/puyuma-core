@@ -107,8 +107,16 @@ int main(int argc, char* argv[])
 		camera.grab();
 		camera.retrieve(frame);
 
-		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 279.087996, 0.000000, 329.895256, 0.000000, 278.852468, 189.532203, 0.000000, 0.000000, 1.000000);
-		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) << -0.275519, 0.051598, 0.003164, -0.000453, 0.000000);
+		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 279.087996, 0.000000, 329.895256,
+							    0.000000, 278.852468, 189.532203,
+							    0.000000, 0.000000, 1.000000);
+
+		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) <<
+						-0.275519, 0.051598, 0.003164, -0.000453, 0.000000);
+
+		cv::Mat H = (cv::Mat1d(3, 3) << 4.015384e-05, -0.0002008101, -0.1583213,
+						0.0008264009, 2.63818e-05, -0.2518232,
+						5.908231e-05, -0.007253319, 1);
 
 		cv::Mat distort_image;
 		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);

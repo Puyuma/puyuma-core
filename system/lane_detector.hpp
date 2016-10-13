@@ -22,12 +22,15 @@ class LaneDetector {
 	cv::Mat inner_hsv_image, inner_canny_image, inner_threshold_image, inner_hough_image;
 	cv::Mat lane_mark_image;
 
+	cv::Mat H; //Homography matrix
+
 	ros::NodeHandle node;
         ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher marked_image_publisher;
 
 	void mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color);
+	Point3f point_transform_image_to_ground(int pixel_x, int pixel_y);
 
 	public:
 	LaneDetector();
