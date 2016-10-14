@@ -13,6 +13,7 @@
 #include <xenobot/wheel_command.h>
 #include "lane_detector.hpp"
 #include "controller.hpp"
+#include "camera.hpp"
 
 using namespace cv;
 
@@ -78,45 +79,54 @@ int main(int argc, char* argv[])
 	ros::Subscriber wheel_command_subscriber =
 		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
 
+	/* Read ROS parameters */
+	string machine_name;
+	if(nh.getParam("machine_name", machine_name) == false) {
+		ROS_INFO("Abort: no machine name assigned!");
+		ROS_INFO("you may try:");
+		ROS_INFO("roslaunch xenobot activate_controller veh:=machine_name");
+		return 0;
+	}
+
+	string yaml_path;
+	if(nh.getParam("yaml_path", yaml_path)) {
+		ROS_INFO("Abort: no configuration path assigned!");
+		ROS_INFO("Instead of doing rosrun command, you should try roslaunch command");
+		return 0;
+	}
+
+	//Generate lane detector
+	lane_detector = new LaneDetector(yaml_path + machine_name + "/");
+	
+	//Load extrinsic calibration data and color thresholding setting
+	if(lane_detector->load_yaml_setting() == false) {
+		return 0;
+	}
+
+	//Load intrinsic calibration data
+	cv::Mat camera_matrix, distort_coffecient;
+
+	if(load_intrinsic_calibration(yaml_path + machine_name + "/",
+		camera_matrix, distort_coffecient) == false) {
+		return 0;
+	}
+
 	/* Setup Raspicam */
 	raspicam::RaspiCam_Cv camera;
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-	camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
-	camera.set(CV_CAP_PROP_CONTRAST, 50);
-	camera.set(CV_CAP_PROP_SATURATION, 50);
-	camera.set(CV_CAP_PROP_GAIN, 50);
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_EXPOSURE, -1);
-	camera.set(CV_CAP_PROP_WHITE_BALANCE_RED_V, 1);
-	camera.set(CV_CAP_PROP_WHITE_BALANCE_BLUE_U, 1);
 
-	if(!camera.open()) {
-		ROS_INFO("failed to open pi camera!\n");
+	if(!camera_setup(camera)) {
+		ROS_INFO("Abort: failed to open pi camera!");
 		return 0;
 	}
 
         cv::Mat frame;
 
-	lane_detector = new LaneDetector();
-
+	/* Motor initialization */
 	motor_init();
 
 	while(1) {
 		camera.grab();
 		camera.retrieve(frame);
-
-		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 279.087996, 0.000000, 329.895256,
-							    0.000000, 278.852468, 189.532203,
-							    0.000000, 0.000000, 1.000000);
-
-		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) <<
-						-0.275519, 0.051598, 0.003164, -0.000453, 0.000000);
-
-		cv::Mat H = (cv::Mat1d(3, 3) << 4.015384e-05, -0.0002008101, -0.1583213,
-						0.0008264009, 2.63818e-05, -0.2518232,
-						5.908231e-05, -0.007253319, 1);
 
 		cv::Mat distort_image;
 		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);
@@ -129,8 +139,6 @@ int main(int argc, char* argv[])
 
 		lane_detector->lane_detect(distort_image);
 		lane_detector->publish_images();
-
-		//cv::imshow("pi camera", distort_image);
 
 		handle_joystick();
 		ros::spinOnce();

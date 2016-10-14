@@ -1,8 +1,11 @@
+#include <fstream>
+
 #include <opencv2/opencv.hpp>
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
 #include "lane_detector.hpp"
+#include <yaml-cpp/yaml.h>
 
 using namespace cv;
 
@@ -10,7 +13,16 @@ void on_trackbar(int, void *)
 {
 }
 
-LaneDetector::LaneDetector() :
+void LaneDetector::ros_node_setup()
+{
+        outer_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
+	outter_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
+        inner_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
+	inner_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 1000);
+        marked_image_publisher = node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
+}
+
+LaneDetector::LaneDetector(string yaml_path) :
 	outer_threshold_h_min(0), outer_threshold_h_max(256),
 	outer_threshold_s_min(0), outer_threshold_s_max(256),
 	outer_threshold_v_min(0), outer_threshold_v_max(256),
@@ -18,27 +30,7 @@ LaneDetector::LaneDetector() :
 	inner_threshold_s_min(0), inner_threshold_s_max(256),
 	inner_threshold_v_min(0), inner_threshold_v_max(256)
 {
-	//Hardcode calibration
-	outer_threshold_h_min = 0, outer_threshold_h_max = 119;
-	outer_threshold_s_min = 0, outer_threshold_s_max = 41;
-	outer_threshold_v_min = 126, outer_threshold_v_max = 256;
-
-	//Hardcode calibration
-	inner_threshold_h_min = 0, inner_threshold_h_max = 45;
-	inner_threshold_s_min = 108, inner_threshold_s_max = 256;
-	inner_threshold_v_min = 176, inner_threshold_v_max = 256;
-
-	double homography_array[9] = {4.015384e-05, -0.0002008101, -0.1583213,
-				     0.0008264009, 2.63818e-05, -0.2518232,
-				     5.908231e-05, -0.007253319, 1};
-	H = cv::Mat(3, 3, CV_32F, homography_array);
-	H = H.inv();
-
-        outer_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
-	outter_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
-        inner_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
-	inner_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 1000);
-        marked_image_publisher = node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
+	ros_node_setup();
 }
 
 void LaneDetector::publish_images()
@@ -80,6 +72,111 @@ void LaneDetector::set_hsv(
 	inner_threshold_s_max = inner_s_max;
 	inner_threshold_v_min = inner_v_min;
 	inner_threshold_v_max = inner_v_max;
+}
+
+bool LaneDetector::load_yaml_setting()
+{
+	if(read_threshold_setting(yaml_path + "hsv_thresholding.yaml") == false) {
+		ROS_INFO("Abort: Can't find color thresholding setting!");
+		return false;
+	}
+
+	if(read_extrinsic_calibration(yaml_path + "extrinsic_calibration.yaml") == false) {
+		ROS_INFO("Abort: Can't find extrinsic calibration data!");
+		return false;
+	}
+}
+
+bool LaneDetector::read_extrinsic_calibration(string yaml_path)
+{
+	try {
+		YAML::Node yaml = YAML::LoadFile(yaml_path + "extrinsic_calibration.yaml");
+
+		double homography_array[9];
+
+		for(int i = 0; i < 9; i++) { 
+			homography_array[i] = yaml["camera_matrix"]["data"][i].as<double>();
+		}
+
+		H = cv::Mat(3, 3, CV_64F, homography_array);
+	} catch(...) {
+		return false;
+	}
+}
+
+bool LaneDetector::read_threshold_setting(string yaml_path)
+{
+	int outer_h_max, outer_s_max, outer_v_max;
+	int outer_h_min, outer_s_min, outer_v_min;
+	int inner_h_max, inner_s_max, inner_v_max;
+	int inner_h_min, inner_s_min, inner_v_min;
+
+	try {
+		YAML::Node yaml = YAML::LoadFile(yaml_path + "intrinsic_calibration.yaml");
+
+		outer_h_min = yaml["outer_h_min"].as<int>();
+		outer_h_max = yaml["outer_h_max"].as<int>();
+		outer_s_min = yaml["outer_s_min"].as<int>();
+		outer_s_max = yaml["outer_s_max"].as<int>();
+		outer_v_min = yaml["outer_v_min"].as<int>();
+		outer_v_max = yaml["outer_v_max"].as<int>();
+
+		inner_h_min = yaml["inner_h_min"].as<int>();
+		inner_h_max = yaml["inner_h_max"].as<int>();
+		inner_s_min = yaml["inner_s_min"].as<int>();
+		inner_s_max = yaml["inner_s_max"].as<int>();
+		inner_v_min = yaml["inner_v_min"].as<int>();
+		inner_v_max = yaml["inner_v_max"].as<int>();
+	} catch(...) {
+		return false;
+	}
+
+	set_hsv(
+		outer_h_max, outer_h_min,
+		outer_s_max, outer_s_min,
+		outer_v_max, outer_v_min,
+		inner_h_max, inner_h_min,
+		inner_s_max, inner_s_min,
+		inner_v_max, inner_v_min
+	);
+}
+
+void LaneDetector::append_yaml_data(YAML::Emitter& yaml_handler, string key, int value)
+{
+	yaml_handler << YAML::Key << key;
+	yaml_handler << YAML::Value << value;
+}
+
+void LaneDetector::save_thresholding_yaml()
+{
+	YAML::Emitter out;
+
+	out << YAML::BeginMap;
+	append_yaml_data(out, "outer_h_max", outer_threshold_h_max);
+	append_yaml_data(out, "outer_h_min", outer_threshold_h_min);
+	append_yaml_data(out, "outer_s_max", outer_threshold_s_max);
+	append_yaml_data(out, "outer_s_min", outer_threshold_s_min);
+	append_yaml_data(out, "outer_v_max", outer_threshold_v_max);
+	append_yaml_data(out, "outer_v_min", outer_threshold_v_min);
+
+	append_yaml_data(out, "inner_h_max", inner_threshold_h_max);
+	append_yaml_data(out, "inner_h_min", inner_threshold_h_min);
+	append_yaml_data(out, "inner_s_max", inner_threshold_s_max);
+	append_yaml_data(out, "inner_s_min", inner_threshold_s_min);
+	append_yaml_data(out, "inner_v_max", inner_threshold_v_max);
+	append_yaml_data(out, "inner_v_min", inner_threshold_v_min);
+
+	/* Save yaml into file */
+	string file_path = yaml_path + "hsv_thresholding.yaml";
+
+	fstream fp;
+	fp.open(file_path.c_str(), ios::out);
+
+	if(fp != 0) {
+		fp << out.c_str() << endl; //Write yaml
+	} else {
+		ROS_INFO("Failed to save the thresholding setting!");
+	}
 }
 
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)

@@ -1,0 +1,13 @@
+outer_h_min: 0
+outer_h_max: 119
+outer_s_min: 0
+outer_s_max: 41
+outer_v_min: 126
+outer_v_max: 256
+
+inner_h_min: 0
+inner_h_max: 45
+inner_s_min: 108
+inner_s_max: 256
+inner_v_min: 176
+inner_v_max: 256

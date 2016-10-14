@@ -86,6 +86,7 @@ set(
     ./system/main.cpp
     ./system/lane_detector.cpp
     ./system/controller.cpp
+    ./system/camera.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})

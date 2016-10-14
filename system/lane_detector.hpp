@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <ros/ros.h>
+#include <yaml-cpp/yaml.h>
 #include <cv_bridge/cv_bridge.h>
 
 using namespace std;
@@ -10,6 +11,8 @@ using namespace cv;
 
 class LaneDetector {
 	private:
+	string yaml_path;
+
 	int outer_threshold_h_min, outer_threshold_h_max;
 	int outer_threshold_s_min, outer_threshold_s_max;
 	int outer_threshold_v_min, outer_threshold_v_max;
@@ -29,11 +32,15 @@ class LaneDetector {
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher marked_image_publisher;
 
+	void ros_node_setup();
+	bool read_threshold_setting(string yaml_path);
+	bool read_extrinsic_calibration(string yaml_path);
 	void mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color);
 	Point3f point_transform_image_to_ground(int pixel_x, int pixel_y);
+	void append_yaml_data(YAML::Emitter& yaml_handler, string key, int value);
 
 	public:
-	LaneDetector();
+	LaneDetector(string yaml_path);
 
 	void lane_detect(cv::Mat& image);
 	void publish_images();
@@ -43,6 +50,9 @@ class LaneDetector {
 	       double inner_h_max, double inner_h_min, double inner_s_max,
 	       double inner_s_min, double inner_v_max, double inner_v_min
 	);
+
+	void save_thresholding_yaml();
+	bool load_yaml_setting();
 };
 
 #endif
