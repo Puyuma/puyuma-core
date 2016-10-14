@@ -32,7 +32,6 @@ class LaneDetector {
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher marked_image_publisher;
 
-	void ros_node_setup();
 	bool read_threshold_setting(string yaml_path);
 	bool read_extrinsic_calibration(string yaml_path);
 	void mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color);

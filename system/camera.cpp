@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 
+#include <ros/ros.h>
 #include <highgui.h>
 #include <cv.h>
 #include <raspicam/raspicam_cv.h>
@@ -10,7 +11,7 @@
 using namespace std;
 
 bool load_intrinsic_calibration(string yaml_path,
-	cv::Mat camera_matrix, cv::Mat distort_coefficients)
+	cv::Mat& camera_matrix, cv::Mat& distort_coefficients)
 {
 	try {
 		YAML::Node yaml = YAML::LoadFile(yaml_path + "intrinsic_calibration.yaml");
@@ -22,13 +23,30 @@ bool load_intrinsic_calibration(string yaml_path,
 			intrinsic_array[i] = yaml["camera_matrix"]["data"][i].as<double>();
 		}
 
-		camera_matrix = cv::Mat(3, 3, CV_64F, intrinsic_array);
+		camera_matrix = (cv::Mat1d(3, 3) << 
+			intrinsic_array[0], intrinsic_array[1], intrinsic_array[2],
+			intrinsic_array[3], intrinsic_array[4], intrinsic_array[5],
+			intrinsic_array[6], intrinsic_array[7], intrinsic_array[8]
+		);
 
 		for(int i = 0; i < 5; i++) {
 			distort_array[i] = yaml["distortion_coefficients"]["data"][i].as<double>();
 		}
 
-		distort_coefficients = cv::Mat(1, 5, CV_64F, distort_array);
+		distort_coefficients = (cv::Mat1d(1, 5) << 
+			distort_array[0], distort_array[1],
+			distort_array[2], distort_array[3], distort_array[4]
+		);
+
+		ROS_INFO("Camera matrix:\n[%f %f %f]\t\n[%f %f %f]\t\n[%f %f %f]",
+			intrinsic_array[0], intrinsic_array[1], intrinsic_array[2],
+			intrinsic_array[3], intrinsic_array[4], intrinsic_array[5],
+			intrinsic_array[6], intrinsic_array[7], intrinsic_array[8]
+		);
+
+		ROS_INFO("Distortion coefficients:\n[%f %f %f %f %f]",
+			distort_array[0], distort_array[1],
+			distort_array[2], distort_array[3], distort_array[4]);
 	} catch(...) {
 		return false;
 	}

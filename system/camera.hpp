@@ -5,6 +5,6 @@
 
 bool camera_setup(raspicam::RaspiCam_Cv& camera);
 bool load_intrinsic_calibration(string yaml_path,
-	cv::Mat camera_matrix, cv::Mat distort_coefficient);
+	cv::Mat& camera_matrix, cv::Mat& distort_coefficient);
 
 #endif 

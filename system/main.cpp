@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 	}
 
 	string yaml_path;
-	if(nh.getParam("yaml_path", yaml_path)) {
+	if(nh.getParam("config_path", yaml_path) == false) {
 		ROS_INFO("Abort: no configuration path assigned!");
 		ROS_INFO("Instead of doing rosrun command, you should try roslaunch command");
 		return 0;
@@ -97,7 +97,10 @@ int main(int argc, char* argv[])
 
 	//Generate lane detector
 	lane_detector = new LaneDetector(yaml_path + machine_name + "/");
-	
+
+	string test = yaml_path + machine_name + "/";
+	ROS_INFO("%s", test.c_str());	
+
 	//Load extrinsic calibration data and color thresholding setting
 	if(lane_detector->load_yaml_setting() == false) {
 		return 0;
@@ -129,6 +132,7 @@ int main(int argc, char* argv[])
 		camera.retrieve(frame);
 
 		cv::Mat distort_image;
+
 		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);
 
 		sensor_msgs::ImagePtr raw_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();

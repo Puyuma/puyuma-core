@@ -13,16 +13,7 @@ void on_trackbar(int, void *)
 {
 }
 
-void LaneDetector::ros_node_setup()
-{
-        outer_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
-	outter_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
-        inner_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
-	inner_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 1000);
-        marked_image_publisher = node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
-}
-
-LaneDetector::LaneDetector(string yaml_path) :
+LaneDetector::LaneDetector(string _yaml_path) :
 	outer_threshold_h_min(0), outer_threshold_h_max(256),
 	outer_threshold_s_min(0), outer_threshold_s_max(256),
 	outer_threshold_v_min(0), outer_threshold_v_max(256),
@@ -30,7 +21,14 @@ LaneDetector::LaneDetector(string yaml_path) :
 	inner_threshold_s_min(0), inner_threshold_s_max(256),
 	inner_threshold_v_min(0), inner_threshold_v_max(256)
 {
-	ros_node_setup();
+	yaml_path = _yaml_path;
+
+        outer_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
+	outter_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
+        inner_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
+	inner_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 1000);
+        marked_image_publisher = node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
+
 }
 
 void LaneDetector::publish_images()
@@ -87,24 +85,28 @@ bool LaneDetector::load_yaml_setting()
 	}
 }
 
-bool LaneDetector::read_extrinsic_calibration(string yaml_path)
+bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 {
 	try {
-		YAML::Node yaml = YAML::LoadFile(yaml_path + "extrinsic_calibration.yaml");
+		ROS_INFO("%s", _yaml_path.c_str());
+
+		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
 		double homography_array[9];
 
 		for(int i = 0; i < 9; i++) { 
-			homography_array[i] = yaml["camera_matrix"]["data"][i].as<double>();
+			homography_array[i] = yaml["homography_matrix"]["data"][i].as<double>();
 		}
 
 		H = cv::Mat(3, 3, CV_64F, homography_array);
 	} catch(...) {
 		return false;
 	}
+
+	return true;
 }
 
-bool LaneDetector::read_threshold_setting(string yaml_path)
+bool LaneDetector::read_threshold_setting(string _yaml_path)
 {
 	int outer_h_max, outer_s_max, outer_v_max;
 	int outer_h_min, outer_s_min, outer_v_min;
@@ -112,7 +114,9 @@ bool LaneDetector::read_threshold_setting(string yaml_path)
 	int inner_h_min, inner_s_min, inner_v_min;
 
 	try {
-		YAML::Node yaml = YAML::LoadFile(yaml_path + "intrinsic_calibration.yaml");
+		ROS_INFO("%s", _yaml_path.c_str());
+
+		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
 		outer_h_min = yaml["outer_h_min"].as<int>();
 		outer_h_max = yaml["outer_h_max"].as<int>();
@@ -139,6 +143,8 @@ bool LaneDetector::read_threshold_setting(string yaml_path)
 		inner_s_max, inner_s_min,
 		inner_v_max, inner_v_min
 	);
+
+	return true;
 }
 
 void LaneDetector::append_yaml_data(YAML::Emitter& yaml_handler, string key, int value)
