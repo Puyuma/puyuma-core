@@ -1,5 +1,5 @@
 <launch>
-    <param name="config_path" value="$(find xenobot)/config/" />
+    <param name="config_path" value="/home/ubuntu/catkin_ws/src/xenobot/config/" />
 
     <param name="machine_name" value="$(arg veh)" />
 
