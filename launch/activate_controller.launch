@@ -7,13 +7,13 @@
 
     <arg name="local" default="false"/>
 
-
     <group if="$(arg local)">
         <node name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller" output="screen"/>
     </group>
 
     <group unless="$(arg local)">
-        <machine name="remote" address="$(arg veh).local" user="ubuntu" />
+        <machine name="remote" address="$(arg veh).local" user="ubuntu"
+		env-loader="~/catkin_ws/src/xenobot/env.sh" />
         <node machine="remote" name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller"
                 output="screen"/>
     </group>
