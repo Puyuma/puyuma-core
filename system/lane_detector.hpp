@@ -27,11 +27,14 @@ class LaneDetector {
 
 	cv::Mat H; //Homography matrix
 
+	bool calibrate_mode;
+
 	ros::NodeHandle node;
         ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher marked_image_publisher;
 
+	double calculate_yaw_angle(Point segment1, Point segment2);
 	bool read_threshold_setting(string yaml_path);
 	bool read_extrinsic_calibration(string yaml_path);
 	void mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color);
@@ -39,7 +42,7 @@ class LaneDetector {
 	void append_yaml_data(YAML::Emitter& yaml_handler, string key, int value);
 
 	public:
-	LaneDetector(string yaml_path);
+	LaneDetector(string yaml_path, bool calibrate_mode);
 
 	void lane_detect(cv::Mat& image);
 	void publish_images();

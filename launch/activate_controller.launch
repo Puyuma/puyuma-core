@@ -4,5 +4,7 @@
 
     <param name="machine_name" value="$(arg veh)" />
 
+    <param name="calibrate" value="false" />
+
     <arg name="debug" default="false"/>
 </launch>

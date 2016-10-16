@@ -95,8 +95,15 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	//Generate lane detector
-	lane_detector = new LaneDetector(yaml_path + machine_name + "/");
+	bool calibrate_mode;
+	bool received_param = nh.getParam("calibrate", calibrate_mode);
+
+	if(calibrate_mode == true || received_param == true) {
+		ROS_INFO("Calibration mode is enabled");
+		lane_detector = new LaneDetector(yaml_path + machine_name + "/", true);
+	} else {
+		lane_detector = new LaneDetector(yaml_path + machine_name + "/", false);
+	}
 
 	string test = yaml_path + machine_name + "/";
 	ROS_INFO("%s", test.c_str());	
@@ -135,8 +142,11 @@ int main(int argc, char* argv[])
 
 		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);
 
-		sensor_msgs::ImagePtr raw_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
-		sensor_msgs::ImagePtr distort_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", distort_image).toImageMsg();
+		sensor_msgs::ImagePtr raw_img_msg =
+			cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
+
+		sensor_msgs::ImagePtr distort_img_msg =
+			cv_bridge::CvImage(std_msgs::Header(), "bgr8", distort_image).toImageMsg();
 
 		raw_image_publisher.publish(raw_img_msg);
 		distort_image_publisher.publish(distort_img_msg);

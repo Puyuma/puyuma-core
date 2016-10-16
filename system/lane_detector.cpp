@@ -7,13 +7,15 @@
 #include "lane_detector.hpp"
 #include <yaml-cpp/yaml.h>
 
+#define rad_to_deg(phi) (phi * 57.2957795)
+
 using namespace cv;
 
 void on_trackbar(int, void *)
 {
 }
 
-LaneDetector::LaneDetector(string _yaml_path) :
+LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	outer_threshold_h_min(0), outer_threshold_h_max(256),
 	outer_threshold_s_min(0), outer_threshold_s_max(256),
 	outer_threshold_v_min(0), outer_threshold_v_max(256),
@@ -21,19 +23,38 @@ LaneDetector::LaneDetector(string _yaml_path) :
 	inner_threshold_s_min(0), inner_threshold_s_max(256),
 	inner_threshold_v_min(0), inner_threshold_v_max(256)
 {
+	this->calibrate_mode = calibrate_mode;
+
 	yaml_path = _yaml_path;
 
-        outer_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
-	outter_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
-        inner_threshold_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
-	inner_hough_img_publisher = node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 1000);
-        marked_image_publisher = node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
+	if(calibrate_mode == true) {
+        	outer_threshold_img_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
 
+		outter_hough_img_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
+
+       		inner_threshold_img_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
+
+		inner_hough_img_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 1000);
+
+	        marked_image_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
+	}
 }
 
 void LaneDetector::publish_images()
 {
 	sensor_msgs::ImagePtr img_msg;
+
+	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC3", lane_mark_image).toImageMsg();
+	marked_image_publisher.publish(img_msg);
+
+	if(calibrate_mode == false) {
+		return;
+	}
 
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", outer_threshold_image).toImageMsg();
 	outer_threshold_img_publisher.publish(img_msg);
@@ -46,9 +67,6 @@ void LaneDetector::publish_images()
 
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", inner_hough_image).toImageMsg();
 	inner_hough_img_publisher.publish(img_msg);
-
-	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC3", lane_mark_image).toImageMsg();
-	marked_image_publisher.publish(img_msg);
 }
 
 void LaneDetector::set_hsv(
@@ -202,7 +220,16 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
 #endif
 
+		double yaw = calculate_yaw_angle(Point(line[0], line[1]), Point(line[2], line[3]));
+		sprintf(text, "%lf", yaw);
+		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
+
 		cv::line(lane_mark_image, Point(line[0], line[1]), Point(line[2], line[3]), line_color, 3, CV_AA);
+		cv::circle(lane_mark_image, Point(line[0], line[1]), 3, dot_color, 2, CV_AA, 0);
+		cv::circle(lane_mark_image, Point(line[2], line[3]), 3, dot_color, 2, CV_AA, 0);
+
+		cv::putText(lane_mark_image, "1", Point(line[0], line[1] + 10), FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
+		cv::putText(lane_mark_image, "2", Point(line[2], line[3] + 10), FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
 	}  
 }
 
@@ -221,6 +248,15 @@ Point3f LaneDetector::point_transform_image_to_ground(int pixel_x, int pixel_y)
 	point_ground.z = 0.0f;
 
 	return point_ground;
+}
+
+double LaneDetector::calculate_yaw_angle(Point segment1, Point segment2)
+{
+	if(segment1.y > segment2.y) {
+		return rad_to_deg(atan2(((double)segment1.y -segment2.y), ((double)segment1.x - segment2.x)));
+	} else {
+		return rad_to_deg(atan2(((double)segment2.y -segment1.y), ((double)segment2.x - segment1.x)));
+	}
 }
 
 cv::Mat test_homography_transform(cv::Mat& rectified_image)
@@ -267,7 +303,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 
 	raw_image.copyTo(lane_mark_image);
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
-	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(255, 0, 0),  Scalar(0, 255, 0));
+	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
 	double outer_angle_max, outer_angle_min, outer_angle_best = 0;
 	double inner_angle_max, inner_angle_min, inner_angle_best = 0;
