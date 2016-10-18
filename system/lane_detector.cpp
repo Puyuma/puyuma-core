@@ -344,7 +344,7 @@ bool LaneDetector::generate_vote(Point2f p1, Point2f p2, uint8_t segment_color,
 
 	float l_i = (l1 + l2) / 2; //segment length
 
-	float phi_i = rad_to_deg(asin(t_hat.x));
+	float phi_i = rad_to_deg(asin(t_hat.y));
 
 	if(segment_color == WHITE) {
 
