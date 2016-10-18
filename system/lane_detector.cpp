@@ -3,13 +3,16 @@
 #include <opencv2/opencv.hpp>
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
+#include <yaml-cpp/yaml.h>
 
 #include "lane_detector.hpp"
-#include <yaml-cpp/yaml.h>
+#include "xeno_math.hpp"
 
 #define rad_to_deg(phi) (phi * 57.2957795)
 
 using namespace cv;
+
+enum SEGMENT_COLOR {WHITE, YELLOW, RED};
 
 void on_trackbar(int, void *)
 {
@@ -205,7 +208,7 @@ void LaneDetector::save_thresholding_yaml()
 
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
 {
-	char text[20] = {'\0'};
+	char text[50] = {'\0'};
 
 	for(size_t i = 0; i < lines.size(); i++) {
 		Vec4i line = lines[i];
@@ -220,16 +223,22 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
 #endif
 
-		double yaw = calculate_yaw_angle(Point(line[0], line[1]), Point(line[2], line[3]));
-		sprintf(text, "%lf", yaw);
+#if 1
+		float d, phi, l;
+		generate_vote(Point2f(line[0], line[1]), Point2f(line[2], line[3]), WHITE, d, phi, l);
+
+		sprintf(text, "d=%f,phi=%f,l=%f ", d, phi, l);
 		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
+#endif
 
 		cv::line(lane_mark_image, Point(line[0], line[1]), Point(line[2], line[3]), line_color, 3, CV_AA);
 		cv::circle(lane_mark_image, Point(line[0], line[1]), 3, dot_color, 2, CV_AA, 0);
 		cv::circle(lane_mark_image, Point(line[2], line[3]), 3, dot_color, 2, CV_AA, 0);
 
-		cv::putText(lane_mark_image, "1", Point(line[0], line[1] + 10), FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
-		cv::putText(lane_mark_image, "2", Point(line[2], line[3] + 10), FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
+		cv::putText(lane_mark_image, "1", Point(line[0], line[1] + 10),
+			FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
+		cv::putText(lane_mark_image, "2", Point(line[2], line[3] + 10),
+			FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
 	}  
 }
 
@@ -248,15 +257,6 @@ Point3f LaneDetector::point_transform_image_to_ground(int pixel_x, int pixel_y)
 	point_ground.z = 0.0f;
 
 	return point_ground;
-}
-
-double LaneDetector::calculate_yaw_angle(Point segment1, Point segment2)
-{
-	if(segment1.y > segment2.y) {
-		return rad_to_deg(atan2(((double)segment1.y -segment2.y), ((double)segment1.x - segment2.x)));
-	} else {
-		return rad_to_deg(atan2(((double)segment2.y -segment1.y), ((double)segment2.x - segment1.x)));
-	}
 }
 
 cv::Mat test_homography_transform(cv::Mat& rectified_image)
@@ -321,4 +321,42 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 
 	cv::imshow("marked image", lane_mark_image);
 #endif
+}
+
+bool LaneDetector::generate_vote(Point2f p1, Point2f p2, uint8_t segment_color,
+	float& d, float& phi, float& l)
+{
+	Point2f t_hat = p2 - p1;
+	normalize(t_hat);
+
+	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
+
+	float d1 = inner_product(n_hat, p1);
+	float d2 = inner_product(n_hat, p2);
+
+	float l1 = inner_product(t_hat, p1);
+	float l2 = inner_product(t_hat, p2);
+
+	float d_i = (d1 + d2) / 2; //lateral displacement
+
+	if(l1 < 0) l1 = -l1;
+	if(l2 < 0) l2 = -l2;	
+
+	float l_i = (l1 + l2) / 2; //segment length
+
+	float phi_i = rad_to_deg(asin(t_hat.x));
+
+	if(segment_color == WHITE) {
+
+	} else if(segment_color == YELLOW) {
+
+	} else {
+		return false;
+	}
+
+	d = d_i;
+	phi = phi_i;
+	l = l_i;
+
+	return true;
 }

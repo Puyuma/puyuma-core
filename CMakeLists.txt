@@ -79,10 +79,12 @@ set(
     XENOBOT_INC
     ./system
     ./system/motor_driver
+    ./common
 )
 
 set(
     XENOBOT_SRC
+    ./common/xeno_math.cpp
     ./system/main.cpp
     ./system/lane_detector.cpp
     ./system/controller.cpp

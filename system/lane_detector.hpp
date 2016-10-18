@@ -34,7 +34,6 @@ class LaneDetector {
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher marked_image_publisher;
 
-	double calculate_yaw_angle(Point segment1, Point segment2);
 	bool read_threshold_setting(string yaml_path);
 	bool read_extrinsic_calibration(string yaml_path);
 	void mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color);
@@ -52,6 +51,9 @@ class LaneDetector {
 	       double inner_h_max, double inner_h_min, double inner_s_max,
 	       double inner_s_min, double inner_v_max, double inner_v_min
 	);
+
+	bool generate_vote(Point2f p1, Point2f p2, uint8_t segment_color, float& d,
+		float& phi, float& l);
 
 	void save_thresholding_yaml();
 	bool load_yaml_setting();
