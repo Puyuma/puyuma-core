@@ -151,7 +151,12 @@ int main(int argc, char* argv[])
 		raw_image_publisher.publish(raw_img_msg);
 		distort_image_publisher.publish(distort_img_msg);
 
-		lane_detector->lane_detect(distort_image);
+		/* Lane estimation */
+		float d = 0, phi = 0;
+		vector<Vec4i> outer_lines;
+		vector<Vec4i> inner_lines;
+		lane_detector->lane_detect(distort_image, outer_lines, inner_lines);
+		lane_detector->pose_estimate(inner_lines, d, phi);
 		lane_detector->publish_images();
 
 		handle_joystick();

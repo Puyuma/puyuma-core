@@ -8,6 +8,8 @@
 #include "lane_detector.hpp"
 #include "xeno_math.hpp"
 
+#define DRAW_DEBUG_INFO 1
+
 #define rad_to_deg(phi) (phi * 57.2957795)
 
 using namespace cv;
@@ -206,6 +208,20 @@ void LaneDetector::save_thresholding_yaml()
 	}
 }
 
+void LaneDetector::calculate_best_fittedline(vector<Vec4i>& lines, Vec4i& best_fitted_line)
+{
+	std::vector<Point2i> points;
+	for(size_t i = 0; i < lines.size(); i++) {
+		points.push_back(Point2i(lines[i][0], lines[i][1]));
+		points.push_back(Point2i(lines[i][2], lines[i][3]));
+	}
+
+	cv::fitLine(Mat(points), best_fitted_line ,CV_DIST_L2, 0, 0.01, 0.01);
+
+	best_fitted_line[0] = 320;
+	best_fitted_line[1] = 480;
+}
+
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
 {
 	char text[50] = {'\0'};
@@ -217,21 +233,16 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 		int mid_y = (line[1] + line[3]) / 2;
 
 #if 0
-		/* Ground coordinate estimation */
-		Point3f ground_point = point_transform_image_to_ground(mid_x, mid_y);
-		sprintf(text, "s%d(%f,%f)", i, ground_point.x, ground_point.y);
-		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
-#endif
-
-#if 1
 		float d, phi, l;
 		generate_vote(Point2f(line[0], line[1]), Point2f(line[2], line[3]), WHITE, d, phi, l);
 
-		sprintf(text, "d=%f,phi=%f,l=%f ", d, phi, l);
+		sprintf(text, "d=%.0f,phi=%.1f,l=%.0f ", d, phi, l);
 		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
 #endif
 
-		cv::line(lane_mark_image, Point(line[0], line[1]), Point(line[2], line[3]), line_color, 3, CV_AA);
+		cv::line(lane_mark_image, Point(line[0], line[1]),
+			Point(line[2], line[3]), line_color, 3, CV_AA);
+
 		cv::circle(lane_mark_image, Point(line[0], line[1]), 3, dot_color, 2, CV_AA, 0);
 		cv::circle(lane_mark_image, Point(line[2], line[3]), 3, dot_color, 2, CV_AA, 0);
 
@@ -271,7 +282,8 @@ cv::Mat test_homography_transform(cv::Mat& rectified_image)
 	return homograhy_image;
 }
 
-void LaneDetector::lane_detect(cv::Mat& raw_image)
+void LaneDetector::lane_detect(cv::Mat& raw_image,
+	vector<Vec4i>& outer_lines, vector<Vec4i>& inner_lines)
 {
 #if 1
 	raw_image = test_homography_transform(raw_image);
@@ -297,7 +309,6 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 	cv::Canny(outer_threshold_image, outer_canny_image, 100, 200, 3);
 	cv::Canny(inner_threshold_image, inner_canny_image, 100, 200, 3);
 
-	vector<Vec4i> outer_lines, inner_lines;
 	cv::HoughLinesP(outer_canny_image, outer_lines, 1, CV_PI / 180, 80, 50, 10);	
 	cv::HoughLinesP(inner_canny_image, inner_lines, 1, CV_PI / 180, 80, 50, 10);	
 
@@ -305,27 +316,62 @@ void LaneDetector::lane_detect(cv::Mat& raw_image)
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
-	double outer_angle_max, outer_angle_min, outer_angle_best = 0;
-	double inner_angle_max, inner_angle_min, inner_angle_best = 0;
-	vector<double> outer_angle_list, inner_angle_list;
+	Vec4i best_fitted_line;
+	calculate_best_fittedline(inner_lines, best_fitted_line);
 
-#if 0
-	cv::imshow("outter canny image", outer_canny_image);
-	cv::imshow("outter hough tranform image", outer_hough_image);
-	cv::imshow("inner canny image", inner_canny_image);
-	cv::imshow("inner hough tranform image", inner_hough_image);
-
-	cv::imshow("original rgb image", raw_image);
-	cv::imshow("outter threshold image", outer_threshold_image);	
-	cv::imshow("inner threshold image", inner_threshold_image);	
-
-	cv::imshow("marked image", lane_mark_image);
+#if 1
+	cv::line(lane_mark_image, Point(best_fitted_line[0], best_fitted_line[1]),
+		Point(best_fitted_line[2], best_fitted_line[3]), Scalar(0, 0, 255), 3, CV_AA);
 #endif
+}
+
+bool LaneDetector::pose_estimate(vector<Vec4i>& lines, float& d, float& phi)
+{
+	if(lines.size() == 0) {
+		putText(lane_mark_image, "Error: Cannot detect any segment", Point(15, 15),
+                FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 0, 255));
+
+		return false;
+	} else {
+		putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
+                FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
+	}
+
+	Vec4i best_fitted_line;
+        calculate_best_fittedline(lines, best_fitted_line);
+
+	Point2f p1, p2;
+	p1.x = best_fitted_line[0];
+	p1.y = best_fitted_line[1];
+	p2.x = best_fitted_line[2];
+	p2.y = best_fitted_line[3];
+
+	phi = rad_to_deg(atanf((p2.x - p1.x) / (p2.y - p1.y)));
+
+#if DRAW_DEBUG_INFO
+	char debug_text[30];
+	sprintf(debug_text, "d=%.0f,phi=%.1f", d, phi);
+
+	int mid_x = (p1.x + p2.x) / 2;
+	int mid_y = (p1.y + p2.y) / 2;
+
+	putText(lane_mark_image, debug_text, Point(mid_x, mid_y),
+		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 0, 255));
+#endif	
+
+	return true;
 }
 
 bool LaneDetector::generate_vote(Point2f p1, Point2f p2, uint8_t segment_color,
 	float& d, float& phi, float& l)
 {
+	if(p2.y > p1.y) {
+		Point2f tmp;
+		tmp = p1;
+		p1 = p2;
+		p2 = tmp;
+	}
+
 	Point2f t_hat = p2 - p1;
 	normalize(t_hat);
 
@@ -338,13 +384,14 @@ bool LaneDetector::generate_vote(Point2f p1, Point2f p2, uint8_t segment_color,
 	float l2 = inner_product(t_hat, p2);
 
 	float d_i = (d1 + d2) / 2; //lateral displacement
+	d_i -= SEMI_IMAGE_WIDTH;
 
 	if(l1 < 0) l1 = -l1;
 	if(l2 < 0) l2 = -l2;	
 
 	float l_i = (l1 + l2) / 2; //segment length
 
-	float phi_i = rad_to_deg(asin(t_hat.y));
+	float phi_i = rad_to_deg(atanf((p2.x - p1.x) / (p2.y - p1.y)));
 
 	if(segment_color == WHITE) {
 
