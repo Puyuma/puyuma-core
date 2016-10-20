@@ -44,6 +44,7 @@ class LaneDetector {
 	Point3f point_transform_image_to_ground(int pixel_x, int pixel_y);
 	void append_yaml_data(YAML::Emitter& yaml_handler, string key, int value);
 	void calculate_best_fittedline(vector<Vec4i>& lines, Vec4i& best_fitted_line);
+	cv::Mat homography_transform(cv::Mat& raw_image, cv::Mat homograhy_image);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);

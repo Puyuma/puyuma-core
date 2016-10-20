@@ -276,23 +276,19 @@ Point3f LaneDetector::point_transform_image_to_ground(int pixel_x, int pixel_y)
 	return point_ground;
 }
 
-cv::Mat test_homography_transform(cv::Mat& rectified_image)
+cv::Mat LaneDetector::homography_transform(cv::Mat& raw_image, cv::Mat homograhy_image)
 {
-	cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
-					 0.00661, -6.97268, 1599.55896,
-					 0.00007, -0.00868, 1.00000);
-
-	cv::Mat homograhy_image;
-	warpPerspective(rectified_image, homograhy_image, H, rectified_image.size());
-
-	return homograhy_image;
+	warpPerspective(raw_image, homograhy_image, H, raw_image.size());
 }
 
 void LaneDetector::lane_detect(cv::Mat& raw_image,
 	vector<Vec4i>& outer_lines, vector<Vec4i>& inner_lines)
 {
 #if 1
-	raw_image = test_homography_transform(raw_image);
+	cv::Mat homography_image;
+	homography_transform(raw_image, homography_image);
+
+	raw_image = homography_image;
 #endif
 	/* RGB to HSV */
 	cv::cvtColor(raw_image, outer_hsv_image, COLOR_BGR2HSV);
