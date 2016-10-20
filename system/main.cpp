@@ -12,6 +12,7 @@
 #include <xenobot/threshold_setting.h>
 #include <xenobot/wheel_command.h>
 #include "lane_detector.hpp"
+#include "motor.hpp"
 #include "controller.hpp"
 #include "camera.hpp"
 
@@ -119,6 +120,11 @@ int main(int argc, char* argv[])
 	if(load_intrinsic_calibration(yaml_path + machine_name + "/",
 		camera_matrix, distort_coffecient) == false) {
 		return 0;
+	}
+
+	//Load PID parameters
+	if(load_pid_param(yaml_path + machine_name + "/")) {
+		ROS_INFO("PID parameter is not exist, load the default setting!");
 	}
 
 	/* Setup Raspicam */

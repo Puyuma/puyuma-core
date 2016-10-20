@@ -88,6 +88,7 @@ set(
     ./system/main.cpp
     ./system/lane_detector.cpp
     ./system/controller.cpp
+    ./system/motor.cpp
     ./system/camera.cpp
 )
 

@@ -1,46 +1,74 @@
-#include <stdlib.h>
-#include <wiringPi.h>
-#include <softPwm.h>
+#include <string>
 
-#define L298N_IN1 0
-#define L298N_IN2 1
-#define L298N_IN3 22
-#define L298N_IN4 26
+#include <ros/ros.h>
+#include <yaml-cpp/yaml.h>
 
-void motor_init()
+#include "controller.hpp"
+#include "motor.hpp"
+
+using namespace std;
+
+float kp_d, ki_d, kd_d;
+float kp_phi, ki_phi, kd_phi;
+
+bool load_pid_param(string _yaml_path)
 {
-	setenv("WIRINGPI_GPIOMEM", "1", 1);
+	try {
+		ROS_INFO("%s", _yaml_path.c_str());
 
-	wiringPiSetup() ;
+		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
-	pinMode(L298N_IN4, OUTPUT); //GPIO12 -> L298N IN4
-	pinMode(L298N_IN3, OUTPUT); //GPIO6  -> L298N IN3
-	pinMode(L298N_IN2, OUTPUT);  //GPIO18 -> L298N IN2
-	pinMode(L298N_IN1, OUTPUT);  //GPIO17 -> L298N IN1
+		kp_d = yaml["pid_d"]["kp"].as<float>();
+		ki_d = yaml["pid_d"]["ki"].as<float>();
+		kd_d = yaml["pid_d"]["kd"].as<float>();
+		kp_phi = yaml["pid_phi"]["kp"].as<float>();
+		ki_phi = yaml["pid_phi"]["ki"].as<float>();
+		kd_phi = yaml["pid_phi"]["kd"].as<float>();
 
-	softPwmCreate(L298N_IN2, 0, 100);
-	softPwmCreate(L298N_IN4, 0, 100);
+		ROS_INFO("PID d controller:\n");
+		ROS_INFO("[Kp:%f, Ki:%f, Kd:%f]", kp_d, ki_d, kd_phi);
 
-	//digitalWrite(L298N_IN4, LOW);
-	digitalWrite(L298N_IN3, LOW);
-	//digitalWrite(L298N_IN2, LOW);
-	digitalWrite(L298N_IN1, LOW);
+		ROS_INFO("PID phi controller:\n");
+		ROS_INFO("[Kp:%f, Ki:%f, Kd:%f]", kp_phi, ki_phi, kd_phi);
+	} catch(...) {
+		//TODO: Load default
+
+		return false;
+	}
+
+	return true;
 }
 
-void test_motor()
+static void bound(int min, int max, int x)
 {
-	digitalWrite(L298N_IN1, LOW);
-	//digitalWrite(L298N_IN2, HIGH);
-	softPwmWrite(L298N_IN2, 100);
-
-	digitalWrite(L298N_IN3, LOW);
-	//digitalWrite(L298N_IN4, HIGH);
-	softPwmWrite(L298N_IN4, 100);
-
+	if(x < min) {
+		x = min;
+	} else if(x > max) {
+		x = max;
+	}
 }
 
-void set_motor_pwm(int8_t left_pwm, int8_t right_pwm)
+static float pid_d_control(int d)
 {
-	softPwmWrite(L298N_IN4, right_pwm);
-	softPwmWrite(L298N_IN2, left_pwm);
+	return kp_d * d;
+}
+
+static float pid_phi_control(int phi)
+{
+	return kp_phi * phi;
+}
+
+void self_driving_controller(int d, int phi)
+{
+	int pwm_left, pwm_right;
+
+	int pwm = pid_d_control(d) + pid_phi_control(phi);
+
+	pwm_left = THROTTLE_BASE + pwm;
+	pwm_right = THROTTLE_BASE - pwm;
+
+	bound(MOTOR_PWM_MIN, MOTOR_PWM_MAX, pwm_left);
+	bound(MOTOR_PWM_MIN, MOTOR_PWM_MAX, pwm_right);
+
+	set_motor_pwm(pwm_left, pwm_right);
 }
