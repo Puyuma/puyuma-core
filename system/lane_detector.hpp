@@ -24,9 +24,9 @@ class LaneDetector {
 	int inner_threshold_s_min, inner_threshold_s_max;
 	int inner_threshold_v_min, inner_threshold_v_max;
 
-	cv::Mat outer_hsv_image, outer_canny_image, outer_threshold_image, outer_hough_image;
-	cv::Mat inner_hsv_image, inner_canny_image, inner_threshold_image, inner_hough_image;
-	cv::Mat lane_mark_image;
+	cv::Mat outer_hsv_image, outer_threshold_image, outer_hough_image;
+	cv::Mat inner_hsv_image, inner_threshold_image, inner_hough_image;
+	cv::Mat lane_mark_image, canny_image;
 
 	cv::Mat H; //Homography matrix
 
@@ -35,6 +35,7 @@ class LaneDetector {
 	ros::NodeHandle node;
         ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
+	ros::Publisher canny_img_publisher;
 	ros::Publisher marked_image_publisher;
 
 	bool read_threshold_setting(string yaml_path);

@@ -39,6 +39,9 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 		outter_hough_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
 
+       		canny_img_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/canny_image", 1000);
+
        		inner_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
 
@@ -60,6 +63,9 @@ void LaneDetector::publish_images()
 	if(calibrate_mode == false) {
 		return;
 	}
+
+	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", canny_image).toImageMsg();
+	canny_img_publisher.publish(img_msg);
 
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", outer_threshold_image).toImageMsg();
 	outer_threshold_img_publisher.publish(img_msg);
@@ -288,10 +294,11 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 #if 1
 	raw_image = test_homography_transform(raw_image);
 #endif
-
+	/* RGB to HSV */
 	cv::cvtColor(raw_image, outer_hsv_image, COLOR_BGR2HSV);
 	cv::cvtColor(raw_image, inner_hsv_image, COLOR_BGR2HSV);
 
+	/* Binarization (Color thresholding) */
 	cv::inRange(
 		outer_hsv_image,
 		Scalar(outer_threshold_h_min, outer_threshold_s_min, outer_threshold_v_min),
@@ -306,11 +313,27 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		inner_threshold_image
 	);
 
-	cv::Canny(outer_threshold_image, outer_canny_image, 100, 200, 3);
-	cv::Canny(inner_threshold_image, inner_canny_image, 100, 200, 3);
+	cv::Mat outer_gray_image, inner_gray_image;
+	cv::cvtColor(raw_image, outer_gray_image, CV_BGR2GRAY);
+	cv::cvtColor(raw_image, inner_gray_image, CV_BGR2GRAY);
 
-	cv::HoughLinesP(outer_canny_image, outer_lines, 1, CV_PI / 180, 80, 50, 10);	
-	cv::HoughLinesP(inner_canny_image, inner_lines, 1, CV_PI / 180, 80, 50, 10);	
+	/* Canny */
+	cv::Mat preprocess_canny_image;
+	cv::Canny(outer_gray_image, preprocess_canny_image, 0, 100, 3);
+
+	/* Deliation */
+	Mat deliation_element = cv::getStructuringElement(MORPH_RECT, Size(3, 3));
+	cv::dilate(preprocess_canny_image, canny_image, deliation_element);
+
+	/* Bitwise and (cany image and color binarization image) */
+	cv::Mat outer_bitwise_and_image, inner_bitwise_and_image;
+
+	cv::bitwise_and(outer_threshold_image, canny_image, outer_bitwise_and_image);
+	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
+
+	/* Hough transform */
+	cv::HoughLinesP(outer_bitwise_and_image, outer_lines, 1, CV_PI / 180, 80, 50, 10);	
+	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, 80, 50, 10);	
 
 	raw_image.copyTo(lane_mark_image);
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
