@@ -46,3 +46,8 @@ void set_motor_pwm(int8_t left_pwm, int8_t right_pwm)
 	softPwmWrite(L298N_IN4, right_pwm);
 	softPwmWrite(L298N_IN2, left_pwm);
 }
+
+void halt_motor()
+{
+	set_motor_pwm(0, 0);
+}

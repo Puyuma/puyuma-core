@@ -44,7 +44,7 @@ bool load_intrinsic_calibration(string yaml_path,
 			intrinsic_array[6], intrinsic_array[7], intrinsic_array[8]
 		);
 
-		ROS_INFO("Distortion coefficients:\n[%f %f %f %f %f]",
+		ROS_INFO("Distortion coefficients:\n[%f %f %f %f %f]\n",
 			distort_array[0], distort_array[1],
 			distort_array[2], distort_array[3], distort_array[4]);
 	} catch(...) {

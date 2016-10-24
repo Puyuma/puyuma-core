@@ -4,6 +4,6 @@ pid_d:
   kd: 0
 
 pid_phi:
-  kp: 0
+  kp: 0.5
   ki: 0
   kd: 0

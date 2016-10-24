@@ -3,7 +3,7 @@
 
 #include <string>
 
-#define THROTTLE_BASE 400 //40% of the throttle
+#define THROTTLE_BASE 70 //40% of the throttle
 
 using namespace std;
 
@@ -14,5 +14,6 @@ enum {
 } ControllerMode;
 
 bool load_pid_param(string _yaml_path);
+void self_driving_controller(int d, int phi);
 
 #endif

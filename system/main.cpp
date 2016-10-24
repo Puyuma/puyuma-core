@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 	}
 
 	//Load PID parameters
-	if(load_pid_param(yaml_path + machine_name + "/")) {
+	if(load_pid_param(yaml_path + machine_name + "/") == false) {
 		ROS_INFO("PID parameter is not exist, load the default setting!");
 	}
 
@@ -162,11 +162,18 @@ int main(int argc, char* argv[])
 		vector<Vec4i> outer_lines;
 		vector<Vec4i> inner_lines;
 		lane_detector->lane_detect(distort_image, outer_lines, inner_lines);
-		lane_detector->pose_estimate(inner_lines, d, phi);
+		bool get_pose = lane_detector->pose_estimate(inner_lines, d, phi);
 		lane_detector->publish_images();
 
-		handle_joystick();
-		ros::spinOnce();
+		/* PID controller */
+		if(get_pose == true) {
+			self_driving_controller(d, phi);
+		} else {
+			halt_motor();	
+		}
+
+		//handle_joystick();
+		//ros::spinOnce();
 	}
 
 	return 0;

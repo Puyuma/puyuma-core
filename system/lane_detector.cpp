@@ -214,18 +214,26 @@ void LaneDetector::save_thresholding_yaml()
 	}
 }
 
-void LaneDetector::calculate_best_fittedline(vector<Vec4i>& lines, Vec4i& best_fitted_line)
+void LaneDetector::calculate_best_fittedline(vector<Vec4i>& lines, Vec4f& best_fitted_line)
 {
-	std::vector<Point2i> points;
+	/* OpenCV returns a normalized vector (vx, vy),
+	   and (x0, y0), a point on the fitted line*/
+
+	//best_fitted_line[0] -> vx
+	//best_fitted_line[1] -> vy
+	//best_fitted_line[2] -> x0
+	//best_fitted_line[3] -> x1
+
+	//The equation of this line is:
+        //(x,y) = (x0,y0) + t * (vx, vy)
+
+	std::vector<Point2f> points;
 	for(size_t i = 0; i < lines.size(); i++) {
-		points.push_back(Point2i(lines[i][0], lines[i][1]));
-		points.push_back(Point2i(lines[i][2], lines[i][3]));
+		points.push_back(Point2f(lines[i][0], lines[i][1]));
+		points.push_back(Point2f(lines[i][2], lines[i][3]));
 	}
 
 	cv::fitLine(Mat(points), best_fitted_line ,CV_DIST_L2, 0, 0.01, 0.01);
-
-	best_fitted_line[0] = 320;
-	best_fitted_line[1] = 480;
 }
 
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
@@ -276,20 +284,38 @@ Point3f LaneDetector::point_transform_image_to_ground(int pixel_x, int pixel_y)
 	return point_ground;
 }
 
-cv::Mat LaneDetector::homography_transform(cv::Mat& raw_image, cv::Mat homograhy_image)
+void LaneDetector::homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image)
 {
+	cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
+		0.00661, -6.97268, 1599.55896,
+		0.00007, -0.00868, 1.00000);
+
 	warpPerspective(raw_image, homograhy_image, H, raw_image.size());
+}
+
+cv::Mat test_homography_transform(cv::Mat& rectified_image)
+{
+        cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
+                                         0.00661, -6.97268, 1599.55896,
+                                         0.00007, -0.00868, 1.00000);
+
+        cv::Mat homograhy_image;
+        warpPerspective(rectified_image, homograhy_image, H, rectified_image.size());
+
+        return homograhy_image;
 }
 
 void LaneDetector::lane_detect(cv::Mat& raw_image,
 	vector<Vec4i>& outer_lines, vector<Vec4i>& inner_lines)
 {
-#if 1
+#if 0
 	cv::Mat homography_image;
 	homography_transform(raw_image, homography_image);
 
-	raw_image = homography_image;
+	homography_image.copyTo(raw_image);
 #endif
+	raw_image = test_homography_transform(raw_image);
+
 	/* RGB to HSV */
 	cv::cvtColor(raw_image, outer_hsv_image, COLOR_BGR2HSV);
 	cv::cvtColor(raw_image, inner_hsv_image, COLOR_BGR2HSV);
@@ -328,19 +354,28 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
 
 	/* Hough transform */
-	cv::HoughLinesP(outer_bitwise_and_image, outer_lines, 1, CV_PI / 180, 80, 50, 10);	
-	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, 80, 50, 10);	
+	cv::HoughLinesP(outer_bitwise_and_image, outer_lines, 1, CV_PI / 180, 80, 50, 5);	
+	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, 80, 50, 5);	
 
 	raw_image.copyTo(lane_mark_image);
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
-	Vec4i best_fitted_line;
+	Vec4f best_fitted_line;
 	calculate_best_fittedline(inner_lines, best_fitted_line);
 
 #if 1
-	cv::line(lane_mark_image, Point(best_fitted_line[0], best_fitted_line[1]),
-		Point(best_fitted_line[2], best_fitted_line[3]), Scalar(0, 0, 255), 3, CV_AA);
+	float x, y;
+	float t = 100;
+
+	x = best_fitted_line[2] + t * best_fitted_line[0];
+	y = best_fitted_line[3] + t * best_fitted_line[1];
+
+	cv::line(
+		lane_mark_image,
+		Point(best_fitted_line[2], best_fitted_line[3]), Point(x, y),
+		Scalar(0, 0, 255), 3, CV_AA
+	);
 #endif
 }
 
@@ -356,26 +391,50 @@ bool LaneDetector::pose_estimate(vector<Vec4i>& lines, float& d, float& phi)
                 FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 	}
 
-	Vec4i best_fitted_line;
+	Vec4f best_fitted_line;
         calculate_best_fittedline(lines, best_fitted_line);
 
+	float t = 100;
 	Point2f p1, p2;
-	p1.x = best_fitted_line[0];
-	p1.y = best_fitted_line[1];
-	p2.x = best_fitted_line[2];
-	p2.y = best_fitted_line[3];
+	p1.x = best_fitted_line[2] + t * best_fitted_line[0];
+	p1.y = best_fitted_line[3] + t * best_fitted_line[1];
+	p2.x = best_fitted_line[2] - t * best_fitted_line[0];
+	p2.y = best_fitted_line[3] - t * best_fitted_line[1];
 
+	/* estimate phi */
 	phi = rad_to_deg(atanf((p2.x - p1.x) / (p2.y - p1.y)));
 
+	if(p2.y > p1.y) {
+		Point2f tmp;
+		tmp = p1;
+		p1 = p2;
+		p2 = tmp;
+	}
+
+	/* Estimate d */
+	Point2f t_hat = p2 - p1;
+	normalize(t_hat);
+
+	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
+
+	float d1 = inner_product(n_hat, p1);
+	float d2 = inner_product(n_hat, p2);
+
+	d = (d1 + d2) / 2; //lateral displacement
+ 	d -= SEMI_IMAGE_WIDTH;
+
 #if DRAW_DEBUG_INFO
+	cv::line(
+		lane_mark_image,
+		p1, p2,
+		Scalar(0, 0, 255), 3, CV_AA
+	);
+
 	char debug_text[30];
 	sprintf(debug_text, "d=%.0f,phi=%.1f", d, phi);
 
-	int mid_x = (p1.x + p2.x) / 2;
-	int mid_y = (p1.y + p2.y) / 2;
-
-	putText(lane_mark_image, debug_text, Point(mid_x, mid_y),
-		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 0, 255));
+	putText(lane_mark_image, debug_text, Point(15, 40),
+		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif	
 
 	return true;
