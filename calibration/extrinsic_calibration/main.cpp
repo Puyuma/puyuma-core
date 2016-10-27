@@ -8,6 +8,8 @@
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
 
+#include "setting.hpp"
+
 using namespace cv;
 
 void save_homography_matrix(cv::Mat& H)
@@ -42,9 +44,9 @@ void mark_checkboard_corners(cv::Mat& rectified_image, std::vector<cv::Point2f>&
 		putText(marked_image, index, Point(point.x, point.y + 10), FONT_HERSHEY_DUPLEX, 1, Scalar(0, 255, 0));
 	}
 
-	//cv::imshow("Extrinsic calibration", marked_image);
+	cv::imshow("Extrinsic calibration", marked_image);
 
-	//cvWaitKey(1);	
+	cvWaitKey(1);	
 }
 
 bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
@@ -53,8 +55,6 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 
 	int board_w = 7, board_h = 5;
 	cv::Size board_size(board_w, board_h);
-
-	float square_size = 42.5f;
 
 	bool found = findChessboardCorners(rectified_image, board_size, corners, CALIB_CB_ADAPTIVE_THRESH);
 
@@ -70,7 +70,7 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 		return false;
 	}
 
-	//mark_checkboard_corners(rectified_image, corners);
+	mark_checkboard_corners(rectified_image, corners);
 
 	/* Check if order is wrong, if so, arrange it */
 	cv::Point2f corner_low_right = corners[0];
@@ -94,8 +94,7 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 
 	for(int row = 0; row < board_h; row++) {
 		for(int column = 0; column < board_w; column++) {
-			//ground_plane_points[row * board_w + column] = cv::Point2f(float(column) * 91.428f, float(row) * 96.0f);
-			ground_plane_points[board_w * board_h - (row * board_w + column) - 1] = cv::Point2f(float(column) * 33.1f + 33.1f, float(row) * 33.1f + 33.1f);
+			ground_plane_points[board_w * board_h - (row * board_w + column) - 1] = cv::Point2f(float(column) * SQUARE_WIDTH + OFFSET_X, float(row) * SQUARE_HEIGHT + OFFSET_Y);
 
 			image_plane_points[row * board_w + column] =
 				corners[
@@ -113,14 +112,14 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 	cv::Mat test;
 	warpPerspective(rectified_image, test, H, rectified_image.size());
 
-	//imshow("ground projection", test);
+	imshow("ground projection", test);
 
-	//waitKey(0);
+	waitKey(0);
 
-	//cv::destroyWindow("ground projection");
+	cv::destroyWindow("ground projection");
 #endif
 
-	//cv::destroyWindow("Extrinsic calibration");
+	cv::destroyWindow("Extrinsic calibration");
 
 	ROS_INFO("Sucessfully calculated the Homography Matrix:");
 
@@ -187,9 +186,9 @@ int main(int argc, char* argv[])
 			cv::imshow("Homography image", ground_projected_image);
 		}
 
-//		cv::imshow("Raw image", distort_image);
+		cv::imshow("Raw image", distort_image);
 
-//		waitKey(1);	
+		waitKey(1);	
 
 
 		//sensor_msgs::ImagePtr homography_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", distort_image).toImageMsg();
