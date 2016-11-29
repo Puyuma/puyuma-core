@@ -3,7 +3,7 @@
 
 #include <string>
 
-#define THROTTLE_BASE 70 //40% of the throttle
+#define THROTTLE_BASE 50 //40% of the throttle
 
 using namespace std;
 
