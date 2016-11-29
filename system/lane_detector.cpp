@@ -450,6 +450,9 @@ bool LaneDetector::generate_vote(Point2f p1, Point2f p2, uint8_t segment_color,
 		p2 = tmp;
 	}
 
+	p1.x -= SEMI_IMAGE_WIDTH;
+	p2.x -= SEMI_IMAGE_WIDTH;
+
 	Point2f t_hat = p2 - p1;
 	normalize(t_hat);
 
@@ -462,7 +465,6 @@ bool LaneDetector::generate_vote(Point2f p1, Point2f p2, uint8_t segment_color,
 	float l2 = inner_product(t_hat, p2);
 
 	float d_i = (d1 + d2) / 2; //lateral displacement
-	d_i -= SEMI_IMAGE_WIDTH;
 
 	if(l1 < 0) l1 = -l1;
 	if(l2 < 0) l2 = -l2;	
