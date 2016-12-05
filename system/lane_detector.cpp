@@ -286,6 +286,39 @@ void LaneDetector::image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, fl
 	gnd_y = pixel_y * (BOARD_HEIGHT + 2) * BOARD_BOX_SIZE / IMAGE_HEIGHT; 
 }
 
+void LaneDetector::gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y)
+{
+	pixel_x = gnd_x / (BOARD_WIDTH + 2) * BOARD_BOX_SIZE / IMAGE_WIDTH;
+	pixel_y = gnd_y / (BOARD_HEIGHT + 2) * BOARD_BOX_SIZE / IMAGE_HEIGHT;
+}
+
+//Calculate the mid line by using white segments and yellow segments
+void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
+{
+	for(size_t i = 0; i < lines.size(); i++) {
+		Point2f p1, p2;
+
+		/* Swap if p1 is higher */
+		if(p1.y > p2.y) {
+			Point2f tmp;
+			tmp = p1;
+			p1 = p2;
+			p2 = tmp;
+		}
+
+		//Construct the unit segment vector
+		Point2f t_hat = p2 - p1;
+		normalize(t_hat);
+
+		//Construct the normal vector with shift length
+		Point2f n_hat(shift_length * -t_hat.y, shift_length * t_hat.x);
+
+		//Shift the segment
+		p1 += n_hat;
+		p2 += n_hat;
+	}
+}
+
 void LaneDetector::lane_detect(cv::Mat& raw_image,
 	vector<Vec4i>& outer_lines, vector<Vec4i>& inner_lines)
 {
@@ -342,10 +375,23 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
+#ifdef NEW_MULTILINE_ALGORITHM
+	shift_segment(outer_lines, +(w + lw / 2));
+	shift_segment(inner_lines, -(w + ly / 2));
+
+	/* Merge 2 segments */
+	Vec4f mid_lines;
+	mid_lines.reserve(outer_lines.size() + inner_lines.size());
+	mid_lines.insert(mid_lines.end(), outer_lines.begin(), outer_lines.end());
+
+	mid_lines.insert(mid_lines.end(), inner_lines.begin(), inner_lines.end());
+#endif
+
+#if 1
 	Vec4f best_fitted_line;
 	calculate_best_fittedline(inner_lines, best_fitted_line);
 
-#if 1
+	/* Plot */
 	float x, y;
 	float t = 100;
 
@@ -425,54 +471,6 @@ bool LaneDetector::pose_estimate(vector<Vec4i>& lines, float& d, float& phi)
 	putText(lane_mark_image, debug_text, Point(15, 40),
 		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif	
-
-	return true;
-}
-
-bool LaneDetector::generate_vote(Point2f p1, Point2f p2, uint8_t segment_color,
-	float& d, float& phi, float& l)
-{
-	if(p2.y > p1.y) {
-		Point2f tmp;
-		tmp = p1;
-		p1 = p2;
-		p2 = tmp;
-	}
-
-	p1.x -= SEMI_IMAGE_WIDTH;
-	p2.x -= SEMI_IMAGE_WIDTH;
-
-	Point2f t_hat = p2 - p1;
-	normalize(t_hat);
-
-	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
-
-	float d1 = inner_product(n_hat, p1);
-	float d2 = inner_product(n_hat, p2);
-
-	float l1 = inner_product(t_hat, p1);
-	float l2 = inner_product(t_hat, p2);
-
-	float d_i = (d1 + d2) / 2; //lateral displacement
-
-	if(l1 < 0) l1 = -l1;
-	if(l2 < 0) l2 = -l2;	
-
-	float l_i = (l1 + l2) / 2; //segment length
-
-	float phi_i = rad_to_deg(atanf((p2.x - p1.x) / (p2.y - p1.y)));
-
-	if(segment_color == WHITE) {
-
-	} else if(segment_color == YELLOW) {
-
-	} else {
-		return false;
-	}
-
-	d = d_i;
-	phi = phi_i;
-	l = l_i;
 
 	return true;
 }

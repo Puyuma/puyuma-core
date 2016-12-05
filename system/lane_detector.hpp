@@ -54,6 +54,8 @@ class LaneDetector {
 	void calculate_best_fittedline(vector<Vec4i>& lines, Vec4f& best_fitted_line);
 	void homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image);
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
+	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
+	void shift_segment(vector<Vec4f>& lines, float length);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);
@@ -70,8 +72,6 @@ class LaneDetector {
 	);
 
 	bool pose_estimate(vector<Vec4i>& outer_lines, float& d, float& phi);
-	bool generate_vote(Point2f p1, Point2f p2, uint8_t segment_color, float& d,
-		float& phi, float& l);
 
 	void save_thresholding_yaml();
 	bool load_yaml_setting();
