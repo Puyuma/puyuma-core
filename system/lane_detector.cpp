@@ -246,14 +246,6 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 		int mid_x = (line[0] + line[2]) / 2;
 		int mid_y = (line[1] + line[3]) / 2;
 
-#if 0
-		float d, phi, l;
-		generate_vote(Point2f(line[0], line[1]), Point2f(line[2], line[3]), WHITE, d, phi, l);
-
-		sprintf(text, "d=%.0f,phi=%.1f,l=%.0f ", d, phi, l);
-		putText(lane_mark_image, text, Point(mid_x, mid_y), FONT_HERSHEY_DUPLEX, 1, text_color);
-#endif
-
 		cv::line(lane_mark_image, Point(line[0], line[1]),
 			Point(line[2], line[3]), line_color, 3, CV_AA);
 
@@ -265,23 +257,6 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Sca
 		cv::putText(lane_mark_image, "2", Point(line[2], line[3] + 10),
 			FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
 	}  
-}
-
-/* Transform point from image plane (pixel) to ground point */
-Point3f LaneDetector::point_transform_image_to_ground(int pixel_x, int pixel_y)
-{
-	cv::Point3f point_image(static_cast<float>(pixel_x), static_cast<float>(pixel_y), 1.0f);
-
-	cv::Mat point_ground_mat = H * cv::Mat(point_image);
-	cv::Point3f point_ground(point_ground_mat);
-
-	ROS_INFO("%f %f %f", point_ground.x, point_ground.y, point_ground.z);
-
-	point_ground.x /= point_ground.z;
-	point_ground.y /= point_ground.z;
-	point_ground.z = 0.0f;
-
-	return point_ground;
 }
 
 void LaneDetector::homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image)
@@ -303,6 +278,12 @@ cv::Mat test_homography_transform(cv::Mat& rectified_image)
         warpPerspective(rectified_image, homograhy_image, H, rectified_image.size());
 
         return homograhy_image;
+}
+
+void LaneDetector::image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y)
+{
+	gnd_x = pixel_x * (BOARD_WIDTH + 2) * BOARD_BOX_SIZE / IMAGE_WIDTH;
+	gnd_y = pixel_y * (BOARD_HEIGHT + 2) * BOARD_BOX_SIZE / IMAGE_HEIGHT; 
 }
 
 void LaneDetector::lane_detect(cv::Mat& raw_image,
@@ -395,16 +376,22 @@ bool LaneDetector::pose_estimate(vector<Vec4i>& lines, float& d, float& phi)
         calculate_best_fittedline(lines, best_fitted_line);
 
 	float t = 100;
+	Point2f _p1, _p2;
+	_p1.x = best_fitted_line[2] + t * best_fitted_line[0];
+	_p1.y = best_fitted_line[3] + t * best_fitted_line[1];
+	_p2.x = best_fitted_line[2] - t * best_fitted_line[0];
+	_p2.y = best_fitted_line[3] - t * best_fitted_line[1];
+
+	/* Set new origin */
+	_p1.x -= SEMI_IMAGE_WIDTH;
+	_p2.x -= SEMI_IMAGE_WIDTH;
+
 	Point2f p1, p2;
-	p1.x = best_fitted_line[2] + t * best_fitted_line[0];
-	p1.y = best_fitted_line[3] + t * best_fitted_line[1];
-	p2.x = best_fitted_line[2] - t * best_fitted_line[0];
-	p2.y = best_fitted_line[3] - t * best_fitted_line[1];
+	image_to_gnd(_p1.x, _p1.y, p1.x, p1.y);
+	image_to_gnd(_p2.x, _p2.y, p2.x, p2.y);
 
-	/* estimate phi */
-	phi = rad_to_deg(atanf((p2.x - p1.x) / (p2.y - p1.y)));
-
-	if(p2.y > p1.y) {
+	/* Swap if pi is higher */
+	if(p1.y > p2.y) {
 		Point2f tmp;
 		tmp = p1;
 		p1 = p2;
@@ -415,13 +402,15 @@ bool LaneDetector::pose_estimate(vector<Vec4i>& lines, float& d, float& phi)
 	Point2f t_hat = p2 - p1;
 	normalize(t_hat);
 
+	/* Estimate phi */
+	phi = rad_to_deg(atan2f(t_hat.y, t_hat.x)) - 90.0f;
+
 	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
 
 	float d1 = inner_product(n_hat, p1);
 	float d2 = inner_product(n_hat, p2);
 
 	d = (d1 + d2) / 2; //lateral displacement
- 	d -= SEMI_IMAGE_WIDTH;
 
 #if DRAW_DEBUG_INFO
 	cv::line(
@@ -431,8 +420,8 @@ bool LaneDetector::pose_estimate(vector<Vec4i>& lines, float& d, float& phi)
 	);
 
 	char debug_text[30];
-	sprintf(debug_text, "d=%.0f,phi=%.1f", d, phi);
-
+	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d, phi);
+	
 	putText(lane_mark_image, debug_text, Point(15, 40),
 		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif	

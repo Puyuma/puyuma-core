@@ -6,8 +6,16 @@
 #include <yaml-cpp/yaml.h>
 #include <cv_bridge/cv_bridge.h>
 
+#define IMAGE_WIDTH 640
+#define IMAGE_HEIGHT 280
+
 #define SEMI_IMAGE_WIDTH 320
 #define SEMI_IMAGE_HEIGHT 240
+
+/* Checkboard parameters */
+#define BOARD_BOX_SIZE 3 //cm
+#define BOARD_WIDTH 6
+#define BOARD_HEIGHT 4
 
 using namespace std;
 using namespace cv;
@@ -45,6 +53,7 @@ class LaneDetector {
 	void append_yaml_data(YAML::Emitter& yaml_handler, string key, int value);
 	void calculate_best_fittedline(vector<Vec4i>& lines, Vec4f& best_fitted_line);
 	void homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image);
+	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);
