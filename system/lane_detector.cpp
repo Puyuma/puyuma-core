@@ -214,7 +214,7 @@ void LaneDetector::save_thresholding_yaml()
 	}
 }
 
-void LaneDetector::calculate_best_fittedline(vector<Vec4i>& lines, Vec4f& best_fitted_line)
+void LaneDetector::calculate_best_fittedline(vector<Vec4f>& lines, Vec4f& best_fitted_line)
 {
 	/* OpenCV returns a normalized vector (vx, vy),
 	   and (x0, y0), a point on the fitted line*/
@@ -236,12 +236,12 @@ void LaneDetector::calculate_best_fittedline(vector<Vec4i>& lines, Vec4f& best_f
 	cv::fitLine(Mat(points), best_fitted_line ,CV_DIST_L2, 0, 0.01, 0.01);
 }
 
-void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4i>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
+void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
 {
 	char text[50] = {'\0'};
 
 	for(size_t i = 0; i < lines.size(); i++) {
-		Vec4i line = lines[i];
+		Vec4f line = lines[i];
 		
 		int mid_x = (line[0] + line[2]) / 2;
 		int mid_y = (line[1] + line[3]) / 2;
@@ -320,7 +320,7 @@ void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
 }
 
 void LaneDetector::lane_detect(cv::Mat& raw_image,
-	vector<Vec4i>& outer_lines, vector<Vec4i>& inner_lines)
+	vector<Vec4f>& outer_lines, vector<Vec4f>& inner_lines)
 {
 #if 0
 	cv::Mat homography_image;
@@ -406,7 +406,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 #endif
 }
 
-bool LaneDetector::pose_estimate(vector<Vec4i>& lines, float& d, float& phi)
+bool LaneDetector::pose_estimate(vector<Vec4f>& lines, float& d, float& phi)
 {
 	if(lines.size() == 0) {
 		putText(lane_mark_image, "Error: Cannot detect any segment", Point(15, 15),
