@@ -161,8 +161,9 @@ int main(int argc, char* argv[])
 		float d = 0, phi = 0;
 		vector<Vec4f> outer_lines;
 		vector<Vec4f> inner_lines;
-		lane_detector->lane_detect(distort_image, outer_lines, inner_lines);
-		bool get_pose = lane_detector->pose_estimate(inner_lines, d, phi);
+		Vec4f predicted_lane;
+		lane_detector->lane_detect(distort_image, outer_lines, inner_lines, predicted_lane);
+		bool get_pose = lane_detector->pose_estimate(predicted_lane, d, phi);
 		lane_detector->publish_images();
 
 		/* PID controller */

@@ -6,16 +6,21 @@
 #include <yaml-cpp/yaml.h>
 #include <cv_bridge/cv_bridge.h>
 
-#define IMAGE_WIDTH 640
-#define IMAGE_HEIGHT 280
+#define IMAGE_WIDTH 640.0 //pixel
+#define IMAGE_HEIGHT 280.0
 
-#define SEMI_IMAGE_WIDTH 320
-#define SEMI_IMAGE_HEIGHT 240
+#define SEMI_IMAGE_WIDTH 320.0
+#define SEMI_IMAGE_HEIGHT 240.0
 
 /* Checkboard parameters */
-#define BOARD_BOX_SIZE 3 //cm
-#define BOARD_WIDTH 6
-#define BOARD_HEIGHT 4
+#define BOARD_BOX_SIZE 3.0 //cm
+#define BOARD_WIDTH 6.0
+#define BOARD_HEIGHT 4.0
+
+/* Lane parameters */
+#define L_W 4.5 //cm
+#define L_Y 2.5
+#define W 20.5
 
 using namespace std;
 using namespace cv;
@@ -51,7 +56,7 @@ class LaneDetector {
 	void mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Scalar line_color, Scalar dot_color, Scalar text_color);
 	Point3f point_transform_image_to_ground(int pixel_x, int pixel_y);
 	void append_yaml_data(YAML::Emitter& yaml_handler, string key, int value);
-	void calculate_best_fittedline(vector<Vec4f>& lines, Vec4f& best_fitted_line);
+	void line_fitting(vector<Vec4f>& lines, Vec4f& best_fitted_line);
 	void homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image);
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
@@ -61,7 +66,7 @@ class LaneDetector {
 	LaneDetector(string yaml_path, bool calibrate_mode);
 
 	void lane_detect(cv::Mat& raw_image, vector<Vec4f>& outer_lines,
-		vector<Vec4f>& inner_lines);	
+		vector<Vec4f>& inner_lines, Vec4f& predicted_lane);	
 	void publish_images();
 	void set_hsv(
 	       double outer_h_max, double outer_h_min, double outer_s_max,
@@ -70,7 +75,7 @@ class LaneDetector {
 	       double inner_s_min, double inner_v_max, double inner_v_min
 	);
 
-	bool pose_estimate(vector<Vec4f>& outer_lines, float& d, float& phi);
+	bool pose_estimate(Vec4f& lane_segment, float& d, float& phi);
 
 	void save_thresholding_yaml();
 	bool load_yaml_setting();

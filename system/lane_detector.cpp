@@ -214,7 +214,7 @@ void LaneDetector::save_thresholding_yaml()
 	}
 }
 
-void LaneDetector::calculate_best_fittedline(vector<Vec4f>& lines, Vec4f& best_fitted_line)
+void LaneDetector::line_fitting(vector<Vec4f>& lines, Vec4f& best_fitted_line)
 {
 	/* OpenCV returns a normalized vector (vx, vy),
 	   and (x0, y0), a point on the fitted line*/
@@ -280,26 +280,29 @@ cv::Mat test_homography_transform(cv::Mat& rectified_image)
         return homograhy_image;
 }
 
+/* Convert image size from pixel to centimeter */
 void LaneDetector::image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y)
 {
-	gnd_x = pixel_x * (BOARD_WIDTH + 2) * BOARD_BOX_SIZE / IMAGE_WIDTH;
-	gnd_y = pixel_y * (BOARD_HEIGHT + 2) * BOARD_BOX_SIZE / IMAGE_HEIGHT; 
+	gnd_x = pixel_x * (((BOARD_WIDTH + 2) * BOARD_BOX_SIZE) / IMAGE_WIDTH);
+	gnd_y = pixel_y * (((BOARD_HEIGHT + 2) * BOARD_BOX_SIZE) / IMAGE_HEIGHT); 
 }
 
+/* Convert image size from centimeter to pixel */
 void LaneDetector::gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y)
 {
-	pixel_x = gnd_x / (BOARD_WIDTH + 2) * BOARD_BOX_SIZE / IMAGE_WIDTH;
-	pixel_y = gnd_y / (BOARD_HEIGHT + 2) * BOARD_BOX_SIZE / IMAGE_HEIGHT;
+	pixel_x = gnd_x * (IMAGE_WIDTH / ((BOARD_WIDTH + 2) * BOARD_BOX_SIZE));
+	pixel_y = gnd_y * (IMAGE_HEIGHT / ((BOARD_HEIGHT + 2) * BOARD_BOX_SIZE));
 }
 
 //Calculate the mid line by using white segments and yellow segments
 void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
 {
 	for(size_t i = 0; i < lines.size(); i++) {
-		Point2f p1, p2;
+		Point2f p1(lines[i][0], lines[i][1]);
+		Point2f p2(lines[i][2], lines[i][3]);
 
 		/* Swap if p1 is higher */
-		if(p1.y > p2.y) {
+		if(p1.y < p2.y) {
 			Point2f tmp;
 			tmp = p1;
 			p1 = p2;
@@ -311,16 +314,22 @@ void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
 		normalize(t_hat);
 
 		//Construct the normal vector with shift length
-		Point2f n_hat(shift_length * -t_hat.y, shift_length * t_hat.x);
+		Point2f n_hat_gnd(shift_length * -t_hat.y, shift_length * t_hat.x);
+		Point2f n_hat_img;
+		gnd_to_image(n_hat_img.x, n_hat_img.y, n_hat_gnd.x, n_hat_gnd.y); 		
 
 		//Shift the segment
-		p1 += n_hat;
-		p2 += n_hat;
+		//P1(x,y)
+		lines[i][0] += n_hat_img.x;
+		lines[i][1] += n_hat_img.y;
+		//P2(x,y)
+                lines[i][2] += n_hat_img.x;
+		lines[i][3] += n_hat_img.y;
 	}
 }
 
 void LaneDetector::lane_detect(cv::Mat& raw_image,
-	vector<Vec4f>& outer_lines, vector<Vec4f>& inner_lines)
+	vector<Vec4f>& outer_lines, vector<Vec4f>& inner_lines, Vec4f& predicted_lane)
 {
 #if 0
 	cv::Mat homography_image;
@@ -375,58 +384,51 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
-#ifdef NEW_MULTILINE_ALGORITHM
-	shift_segment(outer_lines, +(w + lw / 2));
-	shift_segment(inner_lines, -(w + ly / 2));
+	shift_segment(outer_lines, -(W + L_W) / 2.0);
+	shift_segment(inner_lines, +(W + L_Y) / 2.0);
 
-	/* Merge 2 segments */
-	Vec4f mid_lines;
+	/* Merge 2 segment lists */
+	vector<Vec4f> mid_lines;
 	mid_lines.reserve(outer_lines.size() + inner_lines.size());
 	mid_lines.insert(mid_lines.end(), outer_lines.begin(), outer_lines.end());
-
 	mid_lines.insert(mid_lines.end(), inner_lines.begin(), inner_lines.end());
-#endif
+
+	/* Line fiting */
+	line_fitting(mid_lines, predicted_lane);
 
 #if 1
-	Vec4f best_fitted_line;
-	calculate_best_fittedline(inner_lines, best_fitted_line);
-
-	/* Plot */
-	float x, y;
-	float t = 100;
-
-	x = best_fitted_line[2] + t * best_fitted_line[0];
-	y = best_fitted_line[3] + t * best_fitted_line[1];
-
-	cv::line(
-		lane_mark_image,
-		Point(best_fitted_line[2], best_fitted_line[3]), Point(x, y),
-		Scalar(0, 0, 255), 3, CV_AA
-	);
-#endif
-}
-
-bool LaneDetector::pose_estimate(vector<Vec4f>& lines, float& d, float& phi)
-{
-	if(lines.size() == 0) {
+	if(mid_lines.size() == 0) {
 		putText(lane_mark_image, "Error: Cannot detect any segment", Point(15, 15),
                 FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 0, 255));
 
-		return false;
+		//return false;
 	} else {
 		putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
                 FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 	}
 
-	Vec4f best_fitted_line;
-        calculate_best_fittedline(lines, best_fitted_line);
+	/* Plot */
+	float x,y, t = 100;
 
+	x = predicted_lane[2] + t * predicted_lane[0];
+	y = predicted_lane[3] + t * predicted_lane[1];
+
+	cv::line(
+		lane_mark_image,
+		Point(predicted_lane[2], predicted_lane[3]), Point(x, y),
+		Scalar(0, 0, 255), 3, CV_AA
+	);
+#endif
+}
+
+bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
+{
 	float t = 100;
 	Point2f _p1, _p2;
-	_p1.x = best_fitted_line[2] + t * best_fitted_line[0];
-	_p1.y = best_fitted_line[3] + t * best_fitted_line[1];
-	_p2.x = best_fitted_line[2] - t * best_fitted_line[0];
-	_p2.y = best_fitted_line[3] - t * best_fitted_line[1];
+	_p1.x = lane_segment[2] + t * lane_segment[0];
+	_p1.y = lane_segment[3] + t * lane_segment[1];
+	_p2.x = lane_segment[2] - t * lane_segment[0];
+	_p2.y = lane_segment[3] - t * lane_segment[1];
 
 	/* Set new origin */
 	_p1.x -= SEMI_IMAGE_WIDTH;
