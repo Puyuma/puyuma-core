@@ -51,9 +51,8 @@ int main(int argc, char* argv[])
 			cv_bridge::CvImage(std_msgs::Header(), "bgr8", raw_image).toImageMsg();
 		raw_image_publisher.publish(raw_img_msg);
 
-		cv::imshow("Raw image", raw_image);
-
-		waitKey(1);
+		//cv::imshow("Raw image", raw_image);
+		//waitKey(1);
 	}
 
 	return 0;
