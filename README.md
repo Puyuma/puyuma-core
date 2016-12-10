@@ -32,8 +32,8 @@ roslaunch xenobot activate_controller.launch veh:=machine_name
 
 ##Trobleshooting
 
-###Authentication to remote computer[ubuntu@192.168.0.102:22] failed.
-A common cause of this error is a missing key in your authorized_keys file.
+**Authentication to remote computer[ubuntu@192.168.0.102:22] failed.
+A common cause of this error is a missing key in your authorized_keys file.**
 
 Using ssh-copy-id could solve the problem:
 
