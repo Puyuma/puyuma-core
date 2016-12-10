@@ -1,6 +1,38 @@
 #Xenobot
 
-A lightweight replica of MIT duckietown project
+A lightweight replica of MIT duckietown project.
+
+##Installation
+
+Connecting to raspberry pi using ssh then following the instructions.
+
+###1.Raspicam
+
+```
+git clone https://github.com/ncku-ros2-research/raspicam.git
+cd raspicam/
+mkdir build
+cd build
+cmake ..
+sudo make install
+```
+
+###2.WiringPi
+
+```
+git clone https://github.com/ncku-ros2-research/WiringPi.git
+cd WiringPi
+./build
+```
+
+###3.Xenobot
+
+```
+cd $(YOUR_CATKIN_WS)/src
+git clone https://github.com/ncku-ros2-research/xenobot.git
+cd $(YOUR_CATKIN_WS)
+catkin_make
+```
 
 ##Calibration
 
