@@ -140,6 +140,9 @@ int main(int argc, char* argv[])
 	/* Motor initialization */
 	motor_init();
 
+	//JOYSTICK_MODE, SELF_DRIVING_MODE, STOP_MODE
+	int mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+
 	while(1) {
 		camera.grab();
 		camera.retrieve(frame);
@@ -166,15 +169,19 @@ int main(int argc, char* argv[])
 		bool get_pose = lane_detector->pose_estimate(predicted_lane, d, phi);
 		lane_detector->publish_images();
 
+		/* Joystick mode */
+		if(mode == JOYSTICK_MODE) {
+			handle_joystick();
+			ros::spinOnce();
+			continue;
+		}
+
 		/* PID controller */
 		if(get_pose == true) {
 			self_driving_controller(d, phi);
 		} else {
 			halt_motor();	
 		}
-
-		//handle_joystick();
-		//ros::spinOnce();
 	}
 
 	return 0;
