@@ -4,7 +4,7 @@ A lightweight replica of MIT duckietown project
 
 ##Calibration
 
-You must do the calibration before first time initiating the mobile controller.
+You must do the calibration before first time initiating the controller.
 
 ###1. Intrinsic calibration
 
