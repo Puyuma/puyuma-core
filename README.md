@@ -4,7 +4,7 @@ A lightweight replica of MIT duckietown project.
 
 ##Installation
 
-Connecting to raspberry pi using ssh then following the instructions.
+Connecting to your raspberry pi using ssh then follow the instructions.
 
 ###1.Raspicam
 
