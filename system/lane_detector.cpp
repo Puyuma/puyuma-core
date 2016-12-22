@@ -476,3 +476,45 @@ bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
 
 	return true;
 }
+
+//Input a segment then generate a vote (d and phi)
+bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d, float& phi)
+{
+	Point2f _p1, _p2;
+	_p1.x = lane_segment[2];
+	_p1.y = lane_segment[3];
+	_p2.x = lane_segment[2];
+	_p2.y = lane_segment[3];
+
+	/* Set new origin */
+	_p1.x -= SEMI_IMAGE_WIDTH;
+	_p2.x -= SEMI_IMAGE_WIDTH;
+
+	Point2f p1, p2;
+	image_to_gnd(_p1.x, _p1.y, p1.x, p1.y);
+	image_to_gnd(_p2.x, _p2.y, p2.x, p2.y);
+
+	/* Swap if pi is higher */
+	if(p1.y > p2.y) {
+		Point2f tmp;
+		tmp = p1;
+		p1 = p2;
+		p2 = tmp;
+	}
+
+	/* Estimate d */
+	Point2f t_hat = p2 - p1;
+	normalize(t_hat);
+
+	/* Estimate phi */
+	phi = rad_to_deg(atan2f(t_hat.y, t_hat.x)) - 90.0f;
+
+	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
+
+	float d1 = inner_product(n_hat, p1);
+	float d2 = inner_product(n_hat, p2);
+
+	d = (d1 + d2) / 2; //lateral displacement
+
+	return true;
+}
