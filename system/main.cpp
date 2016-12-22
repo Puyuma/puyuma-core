@@ -24,6 +24,9 @@ LaneDetector* lane_detector;
 bool joystick_triggered;
 ros::Time joystick_trigger_time;
 
+//JOYSTICK_MODE, SELF_DRIVING_MODE, STOP_MODE
+int mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+
 void handle_joystick()
 {
 	if(joystick_triggered == true) {
@@ -54,10 +57,12 @@ void threshold_setting_callback(const xenobot::threshold_setting& threshold_sett
 
 void wheel_command_callback(const xenobot::wheel_command& wheel_msg)
 {
-	set_motor_pwm(wheel_msg.left_pwm, wheel_msg.right_pwm);
+	if(mode == JOYSTICK_MODE) {
+		set_motor_pwm(wheel_msg.left_pwm, wheel_msg.right_pwm);
 
-	joystick_triggered = true;
-	ros::Time joystick_trigger_time = ros::Time::now();
+		joystick_triggered = true;
+		ros::Time joystick_trigger_time = ros::Time::now();
+	}
 }
 
 int main(int argc, char* argv[])
@@ -140,9 +145,6 @@ int main(int argc, char* argv[])
 	/* Motor initialization */
 	motor_init();
 
-	//JOYSTICK_MODE, SELF_DRIVING_MODE, STOP_MODE
-	int mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
-
 	while(1) {
 		camera.grab();
 		camera.retrieve(frame);
@@ -169,10 +171,11 @@ int main(int argc, char* argv[])
 		bool get_pose = lane_detector->pose_estimate(predicted_lane, d, phi);
 		lane_detector->publish_images();
 
+		ros::spinOnce(); //ROS functions should hanlde in anouther realtime thread
+
 		/* Joystick mode */
 		if(mode == JOYSTICK_MODE) {
 			handle_joystick();
-			ros::spinOnce();
 			continue;
 		}
 
