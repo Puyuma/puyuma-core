@@ -387,6 +387,97 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	shift_segment(outer_lines, -(W + L_W) / 2.0);
 	shift_segment(inner_lines, +(W + L_Y) / 2.0);
 
+//Hostoram filter
+#if 1
+	//Single vote
+	float d_i = 0, phi_i = 0;
+	
+	//Save every phi and d
+	vector<float> phi_list;
+	vector<float> d_list;
+
+	/* 2D Histogram, size = row * column */
+	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
+
+	/* Generate the vote */
+	for(size_t i = 0; i < outer_lines.size(); i++) {
+		generate_vote(outer_lines[i], d_i, phi_i);
+
+		phi_list.push_back(phi_i);
+		d_list.push_back(d_i);
+
+		//Vote to ...
+		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
+		int _j = (int)round((d_i - PHI_MIN) / DELTA_PHI);
+
+		vote_box[_i][_j] += 1.0f; //Assume that every vote is equally important
+	}
+
+	for(size_t i = 0; i < inner_lines.size(); i++) {
+		generate_vote(inner_lines[i], d_i, phi_i);
+
+		phi_list.push_back(phi_i);
+		d_list.push_back(d_i);
+
+		//Vote to ...
+		int _i = (int)round((phi_i - PHI_MIN) / DELTA_D);
+		int _j = (int)round((d_i - D_MIN) / DELTA_D);
+
+		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
+	}
+
+	/* Now find who has be voted the most */
+	int highest_vote_i = 0, highest_vote_j = 0;
+
+	for(int i = 0; i < HISTOGRAM_R_SIZE; i++) {
+		for(int j = 0; j < HISTOGRAM_C_SIZE; j++) {
+			if(vote_box[i][j] > vote_box[highest_vote_i][highest_vote_j]) {
+				//Change the highest vote index
+				highest_vote_i = i;
+				highest_vote_j = j;
+			}
+		}
+	}
+
+	/* Convert i, j to most possible phi and d range */
+	float predicted_phi = DELTA_PHI * highest_vote_i + PHI_MIN;
+	float predicted_d = DELTA_D * highest_vote_j + D_MIN;
+
+	/* phi and d should in the range of predicted value +- delta/2 */
+	float phi_up_bound = predicted_phi - DELTA_PHI / 2;
+	float phi_low_bound = predicted_phi - DELTA_PHI / 2;
+	float d_up_bound = predicted_d - DELTA_D / 2;
+	float d_low_bound = predicted_d - DELTA_D / 2;
+
+	float phi_mean = 0.0, d_mean = 0.0;
+	int phi_sample_cnt, d_sample_cnt;
+
+	/* Calculate the mean of the vote (TODO:Weighted average?) */
+	for(size_t i = 0; i < phi_list.size(); i++) {
+		phi_i = phi_list.at(i);
+
+		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
+			phi_mean += phi_i;
+			phi_sample_cnt++;
+		}
+	}
+
+	phi_mean /= (float)phi_sample_cnt;
+
+	for(size_t i = 0; i < d_list.size(); i++) {
+		d_i = d_list.at(i);
+
+		if(d_i >= d_low_bound && d_i <= d_up_bound) {
+			phi_mean += d_i;
+			d_sample_cnt++;
+		}
+	}
+
+	d_mean /= (float)d_sample_cnt;
+
+	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
+#endif
+
 	/* Merge 2 segment lists */
 	vector<Vec4f> mid_lines;
 	mid_lines.reserve(outer_lines.size() + inner_lines.size());
