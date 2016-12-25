@@ -7,7 +7,7 @@ find_package(
     sensor_msgs
     std_msgs
     roscpp
-    genmsg
+	message_generation
 )
 
 find_package(Curses REQUIRED)
@@ -17,9 +17,16 @@ add_message_files(
     FILES
     threshold_setting.msg
     wheel_command.msg
+    segmentArray.msg
+    segment.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs)
+
+catkin_package(
+  CATKIN_DEPENDS message_runtime
+)
+
 
 ########################################################################################
 #Color threshold calibration
