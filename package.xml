@@ -17,7 +17,11 @@
   <buildtool_depend>sensor_msgs</buildtool_depend>
   <buildtool_depend>std_msgs</buildtool_depend>
   <buildtool_depend>roscpp</buildtool_depend>
-  <buildtool_depend>genmsg</buildtool_depend>
+  <buildtool_depend>message_generation</buildtool_depend>
+
+  <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>message_runtime</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
