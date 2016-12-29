@@ -27,8 +27,8 @@
 #define DELTA_D 2.5 //cm
 #define PHI_MIN 0.0
 #define PHI_MAX 180.0
-#define D_MIN -25.0
-#define D_MAX +25.0
+#define D_MIN (-25.0)
+#define D_MAX (+25.0)
 #define HISTOGRAM_R_SIZE (int)((PHI_MAX - PHI_MIN) / DELTA_PHI) //phi
 #define HISTOGRAM_C_SIZE (int)((D_MAX - D_MIN) - DELTA_D) //d
 
@@ -75,6 +75,7 @@ class LaneDetector {
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void shift_segment(vector<Vec4f>& lines, float length);
+	bool is_in_range(int x, int lower_limit, int upper_limit);
 	bool edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result);
 	bool generate_vote(Vec4f& lane_segment, float& d, float& phi,
 		int left_or_right, int color);

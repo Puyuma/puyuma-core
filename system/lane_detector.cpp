@@ -332,6 +332,15 @@ void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
 	}
 }
 
+bool LaneDetector::is_in_range(int x, int lower_limit, int upper_limit)
+{
+	if(x >= lower_limit && x <= upper_limit) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 /* 
  * Check the hough transformed line is at the right or left edge of the lane
  * Return false if the result is undetermined
@@ -357,11 +366,12 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 	normalize(t_hat);
 
 	//Midpoint between p1 and p2
-	Point2f midpoint = (p2 - p1) / 2;
+	Point2f midpoint = (p2 + p1) / 2;
 
 	//Find the normal vector
-	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
-	Point2f n_hat_opposite(t_hat.y, -t_hat.x); //Opposited normal vector
+	Point2f n_hat(-t_hat.y, t_hat.x);
+
+	//ROS_INFO("p1(%f,%f) p2(%f,%f)", p1.x, p1.y, p2.x, p2.y);
 
 	int left_cnt = 0, right_cnt = 0; //Left, right accumulator
 	int x, y;
@@ -370,17 +380,27 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 		x = ceil(midpoint.x + n_hat.x * i);
 		y = ceil(midpoint.y + n_hat.y * i);
 
-		if(threshold_image.at<uint8_t>(x, y) >= 255) {
+		/* Check image boundary */
+		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false) {return false;}
+		if(is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {return false;}
+
+		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			left_cnt++;
 		}
 
-		x = ceil(midpoint.x + n_hat.x * i);
-		y = ceil(midpoint.y + n_hat.y * i);
+		x = ceil(midpoint.x - n_hat.x * i);
+		y = ceil(midpoint.y - n_hat.y * i);
 
-		if(threshold_image.at<uint8_t>(x, y) >= 255) {
+		/* Check image boundary */
+		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false) {return false;}
+		if(is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {return false;}
+
+		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			right_cnt++;
 		}
 	}
+
+	ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
 
 	if(left_cnt > 14 && right_cnt > 14) {return false;}
 	if(left_cnt < 14 && right_cnt < 14) {return false;}
@@ -447,11 +467,8 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
-	shift_segment(outer_lines, -(W + L_W) / 2.0);
-	shift_segment(inner_lines, +(W + L_Y) / 2.0);
+#ifndef HISTOGRAM_FILTER
 
-//Hostoram filter
-#if 1
 	//Single vote
 	float d_i = 0, phi_i = 0;
 	
@@ -471,7 +488,11 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		bool ret = 
 			edge_recognize(outer_threshold_image, outer_lines[i], left_or_right);
 
-		ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
+		if(ret == true) {
+			//ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
+		} else {
+			continue; //Skip
+		}
 
 		generate_vote(outer_lines[i], d_i, phi_i, left_or_right, WHITE);
 
@@ -480,7 +501,15 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
-		int _j = (int)round((d_i - PHI_MIN) / DELTA_PHI);
+		int _j = (int)round((d_i - D_MIN) / DELTA_D);
+
+		//Drop the vote if it is out of the boundary
+		if(_i <= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			continue;	
+		}
+
+		//FIXME!
+		ROS_INFO("(%d,%d)", _i, _j);
 
 		vote_box[_i][_j] += 1.0f; //Assume that every vote is equally important
 
@@ -489,15 +518,19 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		segment.phi = phi_i;
 		segment.color = 0; //YELLOW
 		segments_msg.segments.push_back(segment);
-		ROS_INFO("d:%f phi:%f", d_i, phi_i);
+		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
 	for(size_t i = 0; i < inner_lines.size(); i++) {
 		int left_or_right;
 		bool ret = 
-			edge_recognize(outer_threshold_image, outer_lines[i], left_or_right);
+			edge_recognize(inner_threshold_image, inner_lines[i], left_or_right);
 
-		ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
+		if(ret == true) {
+			//ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
+		} else {
+			continue; //Skip
+		}
 
 		generate_vote(inner_lines[i], d_i, phi_i, left_or_right, YELLOW);
 
@@ -505,8 +538,15 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		d_list.push_back(d_i);
 
 		//Vote to ...
-		int _i = (int)round((phi_i - PHI_MIN) / DELTA_D);
+		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
 		int _j = (int)round((d_i - D_MIN) / DELTA_D);
+
+		//Drop the vote if it is out of the boundary
+		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			continue;	
+		}
+
+		ROS_INFO("(%d,%d)", _i, _j);
 
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
 
@@ -515,7 +555,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		segment.phi = phi_i;
 		segment.color = 0; //YELLOW
 		segments_msg.segments.push_back(segment);
-		ROS_INFO("d:%f phi:%f", d_i, phi_i);
+		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
 #endif
@@ -574,6 +614,10 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
 #endif
 
+#ifndef THIS_IS_OLD_FILTER
+	shift_segment(outer_lines, -(W + L_W) / 2.0);
+	shift_segment(inner_lines, +(W + L_Y) / 2.0);
+
 	/* Merge 2 segment lists */
 	vector<Vec4f> mid_lines;
 	mid_lines.reserve(outer_lines.size() + inner_lines.size());
@@ -583,7 +627,6 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	/* Line fiting */
 	line_fitting(mid_lines, predicted_lane);
 
-#ifndef JUST_FOR_TESTING
 	generate_vote(predicted_lane, d_i, phi_i, 0, 0);
 
 	//ROS message
@@ -717,24 +760,17 @@ bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
 
 	d = (d1 + d2) / 2; //lateral displacement
 
+	d -= W / 2;
 
-#if 0
 	if(color == WHITE) {
-		if(right_or_left == LEFT_EDGE) {
-		} else if(right_or_left == RIGHT_EDGE) {
-		} else {
-			return false
+		if(left_or_right == RIGHT_EDGE) {
+			d += L_W;
 		}
 	} else if(color == YELLOW) {
-		if(right_or_left == LEFT_EDGE) {
-		} else if(right_or_left == RIGHT_EDGE) {
-		} else {
-			return false;
+		if(left_or_right == LEFT_EDGE) {
+			d += L_Y;
 		}
-	} else {
-		return false;
 	}
-#endif
 
 	return true;
 }
