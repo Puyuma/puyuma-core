@@ -255,11 +255,6 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Sca
 
 		cv::circle(lane_mark_image, Point(line[0], line[1]), 3, dot_color, 2, CV_AA, 0);
 		cv::circle(lane_mark_image, Point(line[2], line[3]), 3, dot_color, 2, CV_AA, 0);
-
-		cv::putText(lane_mark_image, "1", Point(line[0], line[1] + 10),
-			FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
-		cv::putText(lane_mark_image, "2", Point(line[2], line[3] + 10),
-			FONT_HERSHEY_COMPLEX_SMALL, 1, text_color);
 	}  
 }
 
@@ -354,7 +349,7 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
         p2.y = lane_segment[3];
 
 	/* Swap if p1 is higher */
-	if(p1.y > p2.y) {
+	if(p1.y < p2.y) {
 		Point2f tmp;
 		tmp = p1;
 		p1 = p2;
@@ -407,6 +402,16 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 
 	if(left_cnt > 14) {result = LEFT_EDGE;}
 	if(right_cnt > 14) {result = RIGHT_EDGE;}
+
+#if 1
+	if(result == LEFT_EDGE) {
+		putText(lane_mark_image, "l", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
+			1, Scalar(0, 0, 255));
+	} else {
+			putText(lane_mark_image, "r", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
+			1, Scalar(0, 0, 255));
+	}
+#endif
 
 	return true;
 }
@@ -634,7 +639,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	segment.phi = phi_i;
 	segment.color = 1; //YELLOW
 	segments_msg.segments.push_back(segment);
-	ROS_INFO("d:%f phi:%f", d_i, phi_i);
+	//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 
 	histogram_publisher.publish(segments_msg);
 #endif
@@ -739,7 +744,7 @@ bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
 	image_to_gnd(_p2.x, _p2.y, p2.x, p2.y);
 
 	/* Swap if pi is higher */
-	if(p1.y > p2.y) {
+	if(p1.y < p2.y) {
 		Point2f tmp;
 		tmp = p1;
 		p1 = p2;
