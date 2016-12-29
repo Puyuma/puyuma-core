@@ -366,8 +366,6 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 	//Find the normal vector
 	Point2f n_hat(-t_hat.y, t_hat.x);
 
-	//ROS_INFO("p1(%f,%f) p2(%f,%f)", p1.x, p1.y, p2.x, p2.y);
-
 	int left_cnt = 0, right_cnt = 0; //Left, right accumulator
 	int x, y;
 
@@ -395,7 +393,7 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 		}
 	}
 
-	ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
+	//ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
 
 	if(left_cnt > 14 && right_cnt > 14) {return false;}
 	if(left_cnt < 14 && right_cnt < 14) {return false;}
@@ -513,9 +511,6 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 			continue;	
 		}
 
-		//FIXME!
-		ROS_INFO("(%d,%d)", _i, _j);
-
 		vote_box[_i][_j] += 1.0f; //Assume that every vote is equally important
 
 		//ROS message
@@ -550,8 +545,6 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
 			continue;	
 		}
-
-		ROS_INFO("(%d,%d)", _i, _j);
 
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
 
@@ -756,7 +749,7 @@ bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
 	normalize(t_hat);
 
 	/* Estimate phi */
-	phi = rad_to_deg(atan2f(t_hat.y, t_hat.x)) - 90.0f;
+	phi = rad_to_deg(atan2f(t_hat.y, t_hat.x)) + 90.0f;
 
 	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
 

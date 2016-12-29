@@ -25,12 +25,12 @@
 /* Historgram filter parameters */
 #define DELTA_PHI 3.0 //degree
 #define DELTA_D 2.5 //cm
-#define PHI_MIN 0.0
-#define PHI_MAX 180.0
+#define PHI_MIN (-90.0)
+#define PHI_MAX (+90.0)
 #define D_MIN (-25.0)
 #define D_MAX (+25.0)
 #define HISTOGRAM_R_SIZE (int)((PHI_MAX - PHI_MIN) / DELTA_PHI) //phi
-#define HISTOGRAM_C_SIZE (int)((D_MAX - D_MIN) - DELTA_D) //d
+#define HISTOGRAM_C_SIZE (int)((D_MAX - D_MIN) / DELTA_D) //d
 
 using namespace std;
 using namespace cv;
