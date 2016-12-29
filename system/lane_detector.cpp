@@ -507,7 +507,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		int _j = (int)round((d_i - D_MIN) / DELTA_D);
 
 		//Drop the vote if it is out of the boundary
-		if(_i <= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
 			continue;	
 		}
 
