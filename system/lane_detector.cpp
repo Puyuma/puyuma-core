@@ -473,6 +473,8 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		bool ret = 
 			edge_recognize(outer_threshold_image, outer_lines[i], left_or_right);
 
+		ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
+
 		generate_vote(outer_lines[i], d_i, phi_i);
 
 		phi_list.push_back(phi_i);
@@ -493,6 +495,12 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	}
 
 	for(size_t i = 0; i < inner_lines.size(); i++) {
+		int left_or_right;
+		bool ret = 
+			edge_recognize(outer_threshold_image, outer_lines[i], left_or_right);
+
+		ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
+
 		generate_vote(inner_lines[i], d_i, phi_i);
 
 		phi_list.push_back(phi_i);
