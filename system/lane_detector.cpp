@@ -17,8 +17,6 @@
 
 using namespace cv;
 
-enum SEGMENT_COLOR {WHITE, YELLOW, RED};
-
 void on_trackbar(int, void *)
 {
 }
@@ -475,7 +473,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 
 		ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
 
-		generate_vote(outer_lines[i], d_i, phi_i);
+		generate_vote(outer_lines[i], d_i, phi_i, left_or_right, WHITE);
 
 		phi_list.push_back(phi_i);
 		d_list.push_back(d_i);
@@ -501,7 +499,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 
 		ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
 
-		generate_vote(inner_lines[i], d_i, phi_i);
+		generate_vote(inner_lines[i], d_i, phi_i, left_or_right, YELLOW);
 
 		phi_list.push_back(phi_i);
 		d_list.push_back(d_i);
@@ -586,7 +584,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	line_fitting(mid_lines, predicted_lane);
 
 #ifndef JUST_FOR_TESTING
-	generate_vote(predicted_lane, d_i, phi_i);
+	generate_vote(predicted_lane, d_i, phi_i, 0, 0);
 
 	//ROS message
 	segment.d = d_i;
@@ -680,7 +678,8 @@ bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
 }
 
 //Input a segment then generate a vote (d and phi)
-bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d, float& phi)
+bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
+	float& phi, int left_or_right, int color)
 {
 	Point2f _p1, _p2;
 	_p1.x = lane_segment[0];
@@ -717,6 +716,25 @@ bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d, float& phi)
 	float d2 = inner_product(n_hat, p2);
 
 	d = (d1 + d2) / 2; //lateral displacement
+
+
+#if 0
+	if(color == WHITE) {
+		if(right_or_left == LEFT_EDGE) {
+		} else if(right_or_left == RIGHT_EDGE) {
+		} else {
+			return false
+		}
+	} else if(color == YELLOW) {
+		if(right_or_left == LEFT_EDGE) {
+		} else if(right_or_left == RIGHT_EDGE) {
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
+#endif
 
 	return true;
 }
