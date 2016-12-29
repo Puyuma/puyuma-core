@@ -60,6 +60,7 @@ class LaneDetector {
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher canny_img_publisher;
 	ros::Publisher marked_image_publisher;
+	ros::Publisher histogram_publisher;
 
 	bool read_threshold_setting(string yaml_path);
 	bool read_extrinsic_calibration(string yaml_path);

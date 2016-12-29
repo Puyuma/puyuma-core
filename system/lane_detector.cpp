@@ -5,6 +5,9 @@
 #include <cv_bridge/cv_bridge.h>
 #include <yaml-cpp/yaml.h>
 
+#include <xenobot/segment.h>
+#include <xenobot/segmentArray.h>
+
 #include "lane_detector.hpp"
 #include "xeno_math.hpp"
 
@@ -50,6 +53,9 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 
 	        marked_image_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
+
+		histogram_publisher =
+			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 1000);;
 	}
 }
 
@@ -399,6 +405,10 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	/* 2D Histogram, size = row * column */
 	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
 
+
+	xenobot::segment segment;
+	xenobot::segmentArray segments_msg;
+
 	/* Generate the vote */
 	for(size_t i = 0; i < outer_lines.size(); i++) {
 		generate_vote(outer_lines[i], d_i, phi_i);
@@ -411,6 +421,13 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		int _j = (int)round((d_i - PHI_MIN) / DELTA_PHI);
 
 		vote_box[_i][_j] += 1.0f; //Assume that every vote is equally important
+
+		//ROS message
+		segment.d = d_i;
+		segment.phi = phi_i;
+		segment.color = 0; //YELLOW
+		segments_msg.segments.push_back(segment);
+		ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
 	for(size_t i = 0; i < inner_lines.size(); i++) {
@@ -424,7 +441,18 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		int _j = (int)round((d_i - D_MIN) / DELTA_D);
 
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
+
+		//ROS message
+		segment.d = d_i;
+		segment.phi = phi_i;
+		segment.color = 0; //YELLOW
+		segments_msg.segments.push_back(segment);
+		ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
+
+#endif
+
+#if 0
 
 	/* Now find who has be voted the most */
 	int highest_vote_i = 0, highest_vote_j = 0;
@@ -486,6 +514,19 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 
 	/* Line fiting */
 	line_fitting(mid_lines, predicted_lane);
+
+#ifndef JUST_FOR_TESTING
+	generate_vote(predicted_lane, d_i, phi_i);
+
+	//ROS message
+	segment.d = d_i;
+	segment.phi = phi_i;
+	segment.color = 1; //YELLOW
+	segments_msg.segments.push_back(segment);
+	ROS_INFO("d:%f phi:%f", d_i, phi_i);
+
+	histogram_publisher.publish(segments_msg);
+#endif
 
 #if 1
 	if(mid_lines.size() == 0) {
@@ -572,8 +613,8 @@ bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
 bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d, float& phi)
 {
 	Point2f _p1, _p2;
-	_p1.x = lane_segment[2];
-	_p1.y = lane_segment[3];
+	_p1.x = lane_segment[0];
+	_p1.y = lane_segment[1];
 	_p2.x = lane_segment[2];
 	_p2.y = lane_segment[3];
 
