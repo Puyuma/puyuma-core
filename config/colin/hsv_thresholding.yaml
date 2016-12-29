@@ -6,8 +6,8 @@ outer_v_min: 126
 outer_v_max: 256
 
 inner_h_min: 0
-inner_h_max: 256
-inner_s_min: 55
+inner_h_max: 49
+inner_s_min: 94
 inner_s_max: 256
-inner_v_min: 32
+inner_v_min: 108
 inner_v_max: 256
