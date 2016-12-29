@@ -334,6 +334,59 @@ void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
 	}
 }
 
+/* 
+ * Check the hough transformed line is at the right or left edge of the lane
+ * Return false if the result is undetermined
+ */
+bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result)
+{
+        Point2f p1, p2;
+        p1.x = lane_segment[0];
+        p1.y = lane_segment[1];
+        p2.x = lane_segment[2];
+        p2.y = lane_segment[3];
+
+	/* Swap if p1 is higher */
+	if(p1.y > p2.y) {
+		Point2f tmp;
+		tmp = p1;
+		p1 = p2;
+		p2 = tmp;
+	}
+
+	//Vector normalization
+	Point2f t_hat = p2 - p1;
+	normalize(t_hat);
+
+	//Midpoint between p1 and p2
+	Point2f midpoint = (p2 - p1) / 2;
+
+	//Find the normal vector
+	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
+	Point2f n_hat_opposite(t_hat.y, -t_hat.x); //Opposited normal vector
+
+	int left_cnt = 0, right_cnt = 0; //Left, right accumulator
+	int x, y;
+
+	for(int i = 0 ; i < 20; i++) {
+		x = ceil(midpoint.x + n_hat.x * i);
+		y = ceil(midpoint.y + n_hat.y * i);
+		left_cnt += threshold_image.at<char>(x, y);
+
+		x = ceil(midpoint.x + n_hat.x * i);
+		y = ceil(midpoint.y + n_hat.y * i);
+		right_cnt += threshold_image.at<char>(x, y);
+	}
+
+	if(left_cnt > 14 && right_cnt > 14) {return false;}
+	if(left_cnt < 14 && right_cnt < 14) {return false;}
+
+	if(left_cnt > 14) {result = LEFT_EDGE;}
+	if(right_cnt > 14) {result = RIGHT_EDGE;}
+
+	return true;
+}
+
 void LaneDetector::lane_detect(cv::Mat& raw_image,
 	vector<Vec4f>& outer_lines, vector<Vec4f>& inner_lines, Vec4f& predicted_lane)
 {
@@ -405,12 +458,15 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	/* 2D Histogram, size = row * column */
 	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
 
-
 	xenobot::segment segment;
 	xenobot::segmentArray segments_msg;
 
 	/* Generate the vote */
 	for(size_t i = 0; i < outer_lines.size(); i++) {
+		int left_or_right;
+		bool ret = 
+			edge_recognize(outer_threshold_image, outer_lines[i], left_or_right);
+
 		generate_vote(outer_lines[i], d_i, phi_i);
 
 		phi_list.push_back(phi_i);
@@ -555,7 +611,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 
 bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
 {
-	float t = 100;
+	int t = 100;
 	Point2f _p1, _p2;
 	_p1.x = lane_segment[2] + t * lane_segment[0];
 	_p1.y = lane_segment[3] + t * lane_segment[1];

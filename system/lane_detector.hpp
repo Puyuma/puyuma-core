@@ -35,6 +35,8 @@
 using namespace std;
 using namespace cv;
 
+enum {LEFT_EDGE, RIGHT_EDGE};
+
 class LaneDetector {
 	private:
 	string yaml_path;
@@ -72,6 +74,7 @@ class LaneDetector {
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void shift_segment(vector<Vec4f>& lines, float length);
+	bool edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result);
 	bool generate_vote(Vec4f& lane_segment, float& d, float& phi);
 
 	public:
