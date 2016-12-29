@@ -371,11 +371,17 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 	for(int i = 0 ; i < 20; i++) {
 		x = ceil(midpoint.x + n_hat.x * i);
 		y = ceil(midpoint.y + n_hat.y * i);
-		left_cnt += threshold_image.at<char>(x, y);
+
+		if(threshold_image.at<uint8_t>(x, y) >= 255) {
+			left_cnt++;
+		}
 
 		x = ceil(midpoint.x + n_hat.x * i);
 		y = ceil(midpoint.y + n_hat.y * i);
-		right_cnt += threshold_image.at<char>(x, y);
+
+		if(threshold_image.at<uint8_t>(x, y) >= 255) {
+			right_cnt++;
+		}
 	}
 
 	if(left_cnt > 14 && right_cnt > 14) {return false;}
