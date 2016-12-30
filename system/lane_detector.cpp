@@ -11,6 +11,8 @@
 #include "lane_detector.hpp"
 #include "xeno_math.hpp"
 
+#include "controller.hpp"
+
 #define DRAW_DEBUG_INFO 1
 
 #define rad_to_deg(phi) (phi * 57.2957795)
@@ -250,9 +252,10 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Sca
 		int mid_x = (line[0] + line[2]) / 2;
 		int mid_y = (line[1] + line[3]) / 2;
 
+#if 0
 		cv::line(lane_mark_image, Point(line[0], line[1]),
 			Point(line[2], line[3]), line_color, 3, CV_AA);
-
+#endif
 		cv::circle(lane_mark_image, Point(line[0], line[1]), 3, dot_color, 2, CV_AA, 0);
 		cv::circle(lane_mark_image, Point(line[2], line[3]), 3, dot_color, 2, CV_AA, 0);
 	}  
@@ -327,15 +330,6 @@ void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
 	}
 }
 
-bool LaneDetector::is_in_range(int x, int lower_limit, int upper_limit)
-{
-	if(x >= lower_limit && x <= upper_limit) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
 /* 
  * Check the hough transformed line is at the right or left edge of the lane
  * Return false if the result is undetermined
@@ -373,27 +367,27 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 		x = ceil(midpoint.x + n_hat.x * i);
 		y = ceil(midpoint.y + n_hat.y * i);
 
-		/* Check image boundary */
-		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false ||
-		   is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {
-			//Out of boundary
-		} else if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
+		/* Do saturation if out of boundary */
+		bound(0, IMAGE_WIDTH, x);
+		bound(0, IMAGE_HEIGHT, y);
+
+		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			left_cnt++;
 		}
+
+		/* Do saturation if out of boundary */
+		bound(0, IMAGE_WIDTH, x);
+		bound(0, IMAGE_HEIGHT, y);
 
 		x = ceil(midpoint.x - n_hat.x * i);
 		y = ceil(midpoint.y - n_hat.y * i);
 
-		/* Check image boundary */
-		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false ||
-		   is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {
-			//Out of boundary
-		} else if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
+		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			right_cnt++;
 		}
 	}
 
-	//ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
+	ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
 
 	if(left_cnt > 14 && right_cnt > 14) {return false;}
 	if(left_cnt < 14 && right_cnt < 14) {return false;}

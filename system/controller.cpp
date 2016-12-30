@@ -48,7 +48,7 @@ bool load_pid_param(string _yaml_path)
 	return true;
 }
 
-static void bound(int min, int max, int x)
+void bound(int min, int max, int x)
 {
 	if(x < min) {
 		x = min;

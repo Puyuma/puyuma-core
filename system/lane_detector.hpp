@@ -75,7 +75,6 @@ class LaneDetector {
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void shift_segment(vector<Vec4f>& lines, float length);
-	bool is_in_range(int x, int lower_limit, int upper_limit);
 	bool edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result);
 	bool generate_vote(Vec4f& lane_segment, float& d, float& phi,
 		int left_or_right, int color);
