@@ -393,7 +393,7 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 		}
 	}
 
-	ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
+	//ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
 
 	if(left_cnt > 14 && right_cnt > 14) {return false;}
 	if(left_cnt < 14 && right_cnt < 14) {return false;}
@@ -556,9 +556,9 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
-#endif
+//#endif
 
-#if 0
+//#if 0
 
 	/* Now find who has be voted the most */
 	int highest_vote_i = 0, highest_vote_j = 0;
@@ -577,14 +577,16 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	float predicted_phi = DELTA_PHI * highest_vote_i + PHI_MIN;
 	float predicted_d = DELTA_D * highest_vote_j + D_MIN;
 
+	//ROS_INFO("Predicted phi:%f, d:%f", predicted_phi, predicted_d);
+
 	/* phi and d should in the range of predicted value +- delta/2 */
-	float phi_up_bound = predicted_phi - DELTA_PHI / 2;
+	float phi_up_bound = predicted_phi + DELTA_PHI / 2;
 	float phi_low_bound = predicted_phi - DELTA_PHI / 2;
-	float d_up_bound = predicted_d - DELTA_D / 2;
+	float d_up_bound = predicted_d + DELTA_D / 2;
 	float d_low_bound = predicted_d - DELTA_D / 2;
 
 	float phi_mean = 0.0, d_mean = 0.0;
-	int phi_sample_cnt, d_sample_cnt;
+	int phi_sample_cnt = 0, d_sample_cnt = 0;
 
 	/* Calculate the mean of the vote (TODO:Weighted average?) */
 	for(size_t i = 0; i < phi_list.size(); i++) {
@@ -602,12 +604,18 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		d_i = d_list.at(i);
 
 		if(d_i >= d_low_bound && d_i <= d_up_bound) {
-			phi_mean += d_i;
+			d_mean += d_i;
 			d_sample_cnt++;
 		}
 	}
 
 	d_mean /= (float)d_sample_cnt;
+
+	//ROS message
+	segment.d = d_i;
+	segment.phi = phi_i;
+	segment.color = 1; //YELLOW
+	segments_msg.segments.push_back(segment);
 
 	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
 #endif
@@ -625,11 +633,12 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	/* Line fiting */
 	line_fitting(mid_lines, predicted_lane);
 
-	generate_vote(predicted_lane, d_i, phi_i, 0, 0);
+	float old_filter_d = 0, old_filter_phi = 0;
+	pose_estimate(predicted_lane, old_filter_d, old_filter_phi);
 
 	//ROS message
-	segment.d = d_i;
-	segment.phi = phi_i;
+	segment.d = old_filter_d;
+	segment.phi = old_filter_phi;
 	segment.color = 1; //YELLOW
 	segments_msg.segments.push_back(segment);
 	//ROS_INFO("d:%f phi:%f", d_i, phi_i);
