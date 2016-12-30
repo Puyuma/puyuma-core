@@ -374,10 +374,10 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 		y = ceil(midpoint.y + n_hat.y * i);
 
 		/* Check image boundary */
-		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false) {return false;}
-		if(is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {return false;}
-
-		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
+		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false ||
+		   is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {
+			//Out of boundary
+		} else if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			left_cnt++;
 		}
 
@@ -385,10 +385,10 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 		y = ceil(midpoint.y - n_hat.y * i);
 
 		/* Check image boundary */
-		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false) {return false;}
-		if(is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {return false;}
-
-		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
+		if(is_in_range(x, 0, (int)IMAGE_WIDTH) == false ||
+		   is_in_range(y, 0, (int)IMAGE_HEIGHT) == false) {
+			//Out of boundary
+		} else if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			right_cnt++;
 		}
 	}
