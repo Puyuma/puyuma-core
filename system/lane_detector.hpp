@@ -13,7 +13,7 @@
 #define SEMI_IMAGE_HEIGHT 240.0
 
 /* Checkboard parameters */
-#define BOARD_BOX_SIZE 3.0 //cm
+#define BOARD_BOX_SIZE 3.1 //cm
 #define BOARD_WIDTH 6.0
 #define BOARD_HEIGHT 4.0
 

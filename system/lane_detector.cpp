@@ -253,11 +253,17 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Sca
 		int mid_y = (line[1] + line[3]) / 2;
 
 #if 0
+//#ifndef EDGE_DETECOR_TEST
+		cv::circle(lane_mark_image, Point(mid_x, mid_y), 3, dot_color, 2, CV_AA, 0);
+#endif
+
+#if 1
 		cv::line(lane_mark_image, Point(line[0], line[1]),
 			Point(line[2], line[3]), line_color, 3, CV_AA);
-#endif
+
 		cv::circle(lane_mark_image, Point(line[0], line[1]), 3, dot_color, 2, CV_AA, 0);
 		cv::circle(lane_mark_image, Point(line[2], line[3]), 3, dot_color, 2, CV_AA, 0);
+#endif
 	}  
 }
 
