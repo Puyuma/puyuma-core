@@ -556,10 +556,6 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
-//#endif
-
-//#if 0
-
 	/* Now find who has be voted the most */
 	int highest_vote_i = 0, highest_vote_j = 0;
 
