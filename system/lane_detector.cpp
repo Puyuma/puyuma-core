@@ -516,7 +516,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
-		segment.color = 0; //YELLOW
+		segment.color = 0; //WHITE
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
@@ -551,7 +551,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
-		segment.color = 0; //YELLOW
+		segment.color = 0; //WHITE
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
@@ -617,7 +617,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	//ROS message
 	segment.d = d_mean;
 	segment.phi = phi_mean;
-	segment.color = 1; //YELLOW
+	segment.color = 2; //RED
 	segments_msg.segments.push_back(segment);
 
 	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
