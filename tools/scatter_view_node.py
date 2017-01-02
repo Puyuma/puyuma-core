@@ -12,10 +12,19 @@ import sys
 
 plotWidget = None
 app = None
-d_y = []
-phi_y = []
-d_w = []
-phi_w = []
+d = []
+phi = []
+colors=  ['w','y','r']
+## Color Table ##
+#	0	white	#
+#	1	yellow	#
+#	2	red		#
+#				#
+################
+
+n = len(colors)
+print n
+
 foo = None
 
 class Foo(QObject):
@@ -26,30 +35,33 @@ class Foo(QObject):
 		self.trigger.emit()
 	def handler(self):
 		plotWidget.clear()
-		plotWidget.plot(d_w,phi_w,pen=None,symbol='x',symbolBrush=pg.mkBrush('r'))
-		plotWidget.plot(d_y,phi_y,pen=None,symbol='x',symnolbrush=pg.mkBrush('w'))
+
+		for i in range(n):
+			plotWidget.plot(d[i],phi[i],pen=None,symbol='x',symbolBrush=pg.mkBrush(colors[i]))
 
 def sig_INT_handler(signal, frame):
 	print('You pressed Ctrl+C!')
 	app.quit()
 
 def data_cb(msg):
-	global d_y,d_w,phi_y,phi_w
+	global d,phi
 
 	size = len(msg.segments)
 	rospy.loginfo("get %d data",size)
-	d_y = []
-	d_w = []
-	phi_y = []
-	phi_w = []
+	d = []
+	phi = []
+
+	for i in range(n):
+		d_i = []
+		phi_i = []
+		d.append(d_i)
+		phi.append(phi_i)
+		print i
 
 	for seg in msg.segments:
-		if(seg.color == 1): #yellow
-			d_y.append(seg.d)
-			phi_y.append(seg.phi)
-		elif (seg.color == 0): #white
-			d_w.append(seg.d)
-			phi_w.append(seg.phi)
+		if(seg.color < n):
+			d[seg.color].append(seg.d)
+			phi[seg.color].append(seg.phi)
 		else:
 			rospy.loginfo("invalid color code")
 

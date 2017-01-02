@@ -44,6 +44,7 @@ set(
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${COLOR_THRESHOLD_INC})
 add_executable(color_threshold_calibration ${COLOR_THRESHOLD_SRC})
 target_link_libraries (color_threshold_calibration ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} yaml-cpp raspicam_cv raspicam)
+add_dependencies(color_threshold_calibration ${PROJECT_NAME}_generate_messages_cpp)
 
 ########################################################################################
 #Intrinsic calibration (Provide raw image)
@@ -95,6 +96,7 @@ set(
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR} ${JOYSTICk_INC})
 add_executable(joystick ${JOYSTICK_SRC})
 target_link_libraries (joystick ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} ${CURSES_LIBRARIES} yaml-cpp raspicam_cv)
+add_dependencies(joystick ${PROJECT_NAME}_generate_messages_cpp)
 
 ########################################################################################
 #Object tracker
@@ -119,3 +121,4 @@ set(
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})
 add_executable(activate_controller ${XENOBOT_SRC})
 target_link_libraries (activate_controller ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} -lwiringPi yaml-cpp raspicam_cv raspicam)
+add_dependencies(activate_controller ${PROJECT_NAME}_generate_messages_cpp)
