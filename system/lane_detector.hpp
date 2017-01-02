@@ -23,8 +23,8 @@
 #define W 20.5
 
 /* Historgram filter parameters */
-#define DELTA_PHI 3.0 //degree
-#define DELTA_D 2.5 //cm
+#define DELTA_PHI 2.0 //degree
+#define DELTA_D 2.0 //cm
 #define PHI_MIN (-90.0)
 #define PHI_MAX (+90.0)
 #define D_MIN (-25.0)

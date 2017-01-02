@@ -608,12 +608,19 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	d_mean /= (float)d_sample_cnt;
 
 	//ROS message
-	segment.d = d_i;
-	segment.phi = phi_i;
+	segment.d = d_mean;
+	segment.phi = phi_mean;
 	segment.color = 1; //YELLOW
 	segments_msg.segments.push_back(segment);
 
 	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
+
+	//DEBUG PLOT
+	char debug_text[60];
+	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree <- Histogram filter", d_mean, phi_mean);
+
+	putText(lane_mark_image, debug_text, Point(15, 65),
+		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif
 
 #ifndef THIS_IS_OLD_FILTER
@@ -713,8 +720,8 @@ bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
 		Scalar(0, 0, 255), 3, CV_AA
 	);
 
-	char debug_text[30];
-	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d, phi);
+	char debug_text[60];
+	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree <- Old filter", d, phi);
 	
 	putText(lane_mark_image, debug_text, Point(15, 40),
 		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
@@ -763,17 +770,22 @@ bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
 
 	d = (d1 + d2) / 2; //lateral displacement
 
-	d -= W / 2;
-
 	if(color == WHITE) {
+		d -= W / 2;
+
 		if(left_or_right == RIGHT_EDGE) {
-			d += L_W;
+			d -= L_W;
 		}
 	} else if(color == YELLOW) {
+		d += W / 2;
+
 		if(left_or_right == LEFT_EDGE) {
 			d += L_Y;
 		}
 	}
+
+	//TODO:referive the geometry formulas!
+	d *= -1;
 
 	return true;
 }
