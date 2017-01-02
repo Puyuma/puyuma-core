@@ -164,11 +164,8 @@ int main(int argc, char* argv[])
 
 		/* Lane estimation */
 		float d = 0, phi = 0;
-		vector<Vec4f> outer_lines;
-		vector<Vec4f> inner_lines;
-		Vec4f predicted_lane;
-		lane_detector->lane_detect(distort_image, outer_lines, inner_lines, predicted_lane);
-		bool get_pose = lane_detector->pose_estimate(predicted_lane, d, phi);
+		bool get_pose = lane_detector->lane_estimate(distort_image, d, phi);
+
 		lane_detector->publish_images();
 
 		ros::spinOnce(); //ROS functions should hanlde in anouther realtime thread

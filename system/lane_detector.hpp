@@ -82,8 +82,7 @@ class LaneDetector {
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);
 
-	void lane_detect(cv::Mat& raw_image, vector<Vec4f>& outer_lines,
-		vector<Vec4f>& inner_lines, Vec4f& predicted_lane);	
+	bool lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi);
 	void publish_images();
 	void set_hsv(
 	       double outer_h_max, double outer_h_min, double outer_s_max,
@@ -92,7 +91,7 @@ class LaneDetector {
 	       double inner_s_min, double inner_v_max, double inner_v_min
 	);
 
-	bool pose_estimate(Vec4f& lane_segment, float& d, float& phi);
+	bool old_filter_pose_estimate(Vec4f& lane_segment, float& d, float& phi);
 
 	void save_thresholding_yaml();
 	bool load_yaml_setting();

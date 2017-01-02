@@ -414,8 +414,7 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 	return true;
 }
 
-void LaneDetector::lane_detect(cv::Mat& raw_image,
-	vector<Vec4f>& outer_lines, vector<Vec4f>& inner_lines, Vec4f& predicted_lane)
+bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi)
 {
 #if 0
 	cv::Mat homography_image;
@@ -463,6 +462,7 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
 
 	/* Hough transform */
+	vector<Vec4f> outer_lines, inner_lines;
 	cv::HoughLinesP(outer_bitwise_and_image, outer_lines, 1, CV_PI / 180, 80, 50, 5);	
 	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, 80, 50, 5);	
 
@@ -594,6 +594,8 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		}
 	}
 
+	if(phi_sample_cnt == 0) return false;
+
 	phi_mean /= (float)phi_sample_cnt;
 
 	for(size_t i = 0; i < d_list.size(); i++) {
@@ -607,6 +609,11 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 
 	d_mean /= (float)d_sample_cnt;
 
+	if(d_sample_cnt == 0) return false;
+
+	final_d = d_mean;
+	final_phi = phi_mean;
+
 	//ROS message
 	segment.d = d_mean;
 	segment.phi = phi_mean;
@@ -617,9 +624,10 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 
 	//DEBUG PLOT
 	char debug_text[60];
-	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree <- Histogram filter", d_mean, phi_mean);
+	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d_mean, phi_mean);
 
-	putText(lane_mark_image, debug_text, Point(15, 65),
+	/* 65 for two filter parallel display  */
+	putText(lane_mark_image, debug_text, Point(15, 40),
 		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif
 
@@ -634,10 +642,11 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 	mid_lines.insert(mid_lines.end(), inner_lines.begin(), inner_lines.end());
 
 	/* Line fiting */
+	Vec4f predicted_lane;
 	line_fitting(mid_lines, predicted_lane);
 
 	float old_filter_d = 0, old_filter_phi = 0;
-	pose_estimate(predicted_lane, old_filter_d, old_filter_phi);
+	old_filter_pose_estimate(predicted_lane, old_filter_d, old_filter_phi);
 
 	//ROS message
 	segment.d = old_filter_d;
@@ -659,22 +668,12 @@ void LaneDetector::lane_detect(cv::Mat& raw_image,
 		putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
                 FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 	}
-
-	/* Plot */
-	float x,y, t = 100;
-
-	x = predicted_lane[2] + t * predicted_lane[0];
-	y = predicted_lane[3] + t * predicted_lane[1];
-
-	cv::line(
-		lane_mark_image,
-		Point(predicted_lane[2], predicted_lane[3]), Point(x, y),
-		Scalar(0, 0, 255), 3, CV_AA
-	);
 #endif
+
+	return true;
 }
 
-bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
+bool LaneDetector::old_filter_pose_estimate(Vec4f& lane_segment, float& d, float& phi)
 {
 	int t = 100;
 	Point2f _p1, _p2;
@@ -713,7 +712,7 @@ bool LaneDetector::pose_estimate(Vec4f& lane_segment, float& d, float& phi)
 
 	d = (d1 + d2) / 2; //lateral displacement
 
-#if DRAW_DEBUG_INFO
+#if 0
 	cv::line(
 		lane_mark_image,
 		p1, p2,
