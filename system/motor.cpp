@@ -3,6 +3,7 @@
 #include <softPwm.h>
 
 #include "motor.hpp"
+#include "controller.hpp"
 
 #define L298N_IN1 0
 #define L298N_IN2 1
@@ -50,4 +51,6 @@ void set_motor_pwm(int8_t left_pwm, int8_t right_pwm)
 void halt_motor()
 {
 	set_motor_pwm(0, 0);
+
+	pid_halt();
 }
