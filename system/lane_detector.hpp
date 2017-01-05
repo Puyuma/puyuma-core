@@ -19,8 +19,8 @@
 
 /* Lane parameters */
 #define L_W 4.5 //cm
-#define L_Y 2.5
-#define W 20.5
+#define L_Y 4.5
+#define W 16.5
 
 /* Historgram filter parameters */
 #define DELTA_PHI 2.0 //degree
@@ -31,6 +31,10 @@
 #define D_MAX (+25.0)
 #define HISTOGRAM_R_SIZE (int)((PHI_MAX - PHI_MIN) / DELTA_PHI) //phi
 #define HISTOGRAM_C_SIZE (int)((D_MAX - D_MIN) / DELTA_D) //d
+#define HISTOGRAM_FILTER_THRESHOLD (vote_count / 3)
+
+/* Hough transform parameter */
+#define HOUGH_THRESHOLD 135
 
 using namespace std;
 using namespace cv;
