@@ -68,6 +68,14 @@ roslaunch xenobot activate_controller.launch veh:=machine_name calibrate:=true
 roslaunch xenobot activate_controller.launch veh:=machine_name
 ```
 
+##Analysing
+
+###Scatter plot
+
+```
+rosrun xenobot scatter_view_node.py
+```
+
 ##Trobleshooting
 
 **Authentication to remote computer[ubuntu@192.168.0.102:22] failed.
