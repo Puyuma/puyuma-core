@@ -463,8 +463,8 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 	/* Hough transform */
 	vector<Vec4f> outer_lines, inner_lines;
-	cv::HoughLinesP(outer_bitwise_and_image, outer_lines, 1, CV_PI / 180, 80, 50, 5);	
-	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, 80, 50, 5);	
+	cv::HoughLinesP(outer_bitwise_and_image, outer_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
+	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
 
 	raw_image.copyTo(lane_mark_image);
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
@@ -474,6 +474,9 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 	//Single vote
 	float d_i = 0, phi_i = 0;
+
+	//Vote count
+	int vote_count = 0;
 	
 	//Save every phi and d
 	vector<float> phi_list;
@@ -501,6 +504,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 		phi_list.push_back(phi_i);
 		d_list.push_back(d_i);
+		vote_count++;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
@@ -536,6 +540,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 		phi_list.push_back(phi_i);
 		d_list.push_back(d_i);
+		vote_count++;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
@@ -567,6 +572,10 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 				highest_vote_j = j;
 			}
 		}
+	}
+
+	if(vote_box[highest_vote_i][highest_vote_j] < HISTOGRAM_FILTER_THRESHOLD) {
+		return false;
 	}
 
 	/* Convert i, j to most possible phi and d range */
@@ -621,17 +630,10 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_msg.segments.push_back(segment);
 
 	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
-
-	//DEBUG PLOT
-	char debug_text[60];
-	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d_mean, phi_mean);
-
-	/* 65 for two filter parallel display  */
-	putText(lane_mark_image, debug_text, Point(15, 40),
-		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif
 
-#ifndef THIS_IS_OLD_FILTER
+	/* Old lane filter */
+#if 0
 	shift_segment(outer_lines, -(W + L_W) / 2.0);
 	shift_segment(inner_lines, +(W + L_Y) / 2.0);
 
@@ -655,10 +657,12 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_msg.segments.push_back(segment);
 	//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 
-	histogram_publisher.publish(segments_msg);
 #endif
 
-#if 1
+	histogram_publisher.publish(segments_msg);
+
+	/* Car status, need to be fixed */
+#if 0
 	if(mid_lines.size() == 0) {
 		putText(lane_mark_image, "Error: Cannot detect any segment", Point(15, 15),
                 FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 0, 255));
@@ -668,6 +672,16 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
                 FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 	}
+#else
+	/* Debug plot */
+	putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
+		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
+
+	/* 65 for two filter parallel display  */
+	char debug_text[60];
+	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d_mean, phi_mean);
+	putText(lane_mark_image, debug_text, Point(15, 40),
+		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif
 
 	return true;

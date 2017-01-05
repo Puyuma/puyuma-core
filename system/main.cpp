@@ -180,9 +180,16 @@ int main(int argc, char* argv[])
 		if(get_pose == true) {
 			self_driving_controller(d, phi);
 		} else {
-			halt_motor();	
+			halt_motor();
+
+			ROS_INFO("Can't estimate the lane pose, too many noise!");
 		}
 	}
 
 	return 0;
+}
+
+__attribute__((destructor))void end()
+{
+	halt_motor();
 }

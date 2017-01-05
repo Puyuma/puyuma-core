@@ -3,7 +3,9 @@
 
 #include <string>
 
-#define THROTTLE_BASE 35 //25% of the throttle
+#include <ros/ros.h>
+
+#define THROTTLE_BASE 35 //35% of the throttle
 
 using namespace std;
 
@@ -13,8 +15,20 @@ enum {
 	STOP_MODE
 } ControllerMode;
 
+typedef struct {
+	float kp, ki, kd;
+
+	bool been_halted;
+	bool been_init;
+
+	float previous_error;
+
+	ros::Time previous_time; //XXX:This is not realtime!
+} pid_control_t;
+
 bool load_pid_param(string _yaml_path);
-void self_driving_controller(int d, int phi);
+void self_driving_controller(float d, float phi);
+void pid_halt();
 
 void bound(int min, int max, int x);
 
