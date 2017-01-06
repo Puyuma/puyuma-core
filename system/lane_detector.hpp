@@ -78,7 +78,6 @@ class LaneDetector {
 	void homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image);
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
-	void shift_segment(vector<Vec4f>& lines, float length);
 	bool edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result);
 	bool generate_vote(Vec4f& lane_segment, float& d, float& phi,
 		int left_or_right, int color);
@@ -94,8 +93,6 @@ class LaneDetector {
 	       double inner_h_max, double inner_h_min, double inner_s_max,
 	       double inner_s_min, double inner_v_max, double inner_v_min
 	);
-
-	bool old_filter_pose_estimate(Vec4f& lane_segment, float& d, float& phi);
 
 	void save_thresholding_yaml();
 	bool load_yaml_setting();

@@ -302,40 +302,6 @@ void LaneDetector::gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, fl
 	pixel_y = gnd_y * (IMAGE_HEIGHT / ((BOARD_HEIGHT + 2) * BOARD_BOX_SIZE));
 }
 
-//Calculate the mid line by using white segments and yellow segments
-void LaneDetector::shift_segment(vector<Vec4f>& lines, float shift_length)
-{
-	for(size_t i = 0; i < lines.size(); i++) {
-		Point2f p1(lines[i][0], lines[i][1]);
-		Point2f p2(lines[i][2], lines[i][3]);
-
-		/* Swap if p1 is higher */
-		if(p1.y < p2.y) {
-			Point2f tmp;
-			tmp = p1;
-			p1 = p2;
-			p2 = tmp;
-		}
-
-		//Construct the unit segment vector
-		Point2f t_hat = p2 - p1;
-		normalize(t_hat);
-
-		//Construct the normal vector with shift length
-		Point2f n_hat_gnd(shift_length * -t_hat.y, shift_length * t_hat.x);
-		Point2f n_hat_img;
-		gnd_to_image(n_hat_img.x, n_hat_img.y, n_hat_gnd.x, n_hat_gnd.y); 		
-
-		//Shift the segment
-		//P1(x,y)
-		lines[i][0] += n_hat_img.x;
-		lines[i][1] += n_hat_img.y;
-		//P2(x,y)
-                lines[i][2] += n_hat_img.x;
-		lines[i][3] += n_hat_img.y;
-	}
-}
-
 /* 
  * Check the hough transformed line is at the right or left edge of the lane
  * Return false if the result is undetermined
@@ -470,7 +436,8 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
-#ifndef HISTOGRAM_FILTER
+
+	/* Histogram filtering */
 
 	//Single vote
 	float d_i = 0, phi_i = 0;
@@ -630,34 +597,6 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_msg.segments.push_back(segment);
 
 	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
-#endif
-
-	/* Old lane filter */
-#if 0
-	shift_segment(outer_lines, -(W + L_W) / 2.0);
-	shift_segment(inner_lines, +(W + L_Y) / 2.0);
-
-	/* Merge 2 segment lists */
-	vector<Vec4f> mid_lines;
-	mid_lines.reserve(outer_lines.size() + inner_lines.size());
-	mid_lines.insert(mid_lines.end(), outer_lines.begin(), outer_lines.end());
-	mid_lines.insert(mid_lines.end(), inner_lines.begin(), inner_lines.end());
-
-	/* Line fiting */
-	Vec4f predicted_lane;
-	line_fitting(mid_lines, predicted_lane);
-
-	float old_filter_d = 0, old_filter_phi = 0;
-	old_filter_pose_estimate(predicted_lane, old_filter_d, old_filter_phi);
-
-	//ROS message
-	segment.d = old_filter_d;
-	segment.phi = old_filter_phi;
-	segment.color = 1; //YELLOW
-	segments_msg.segments.push_back(segment);
-	//ROS_INFO("d:%f phi:%f", d_i, phi_i);
-
-#endif
 
 	histogram_publisher.publish(segments_msg);
 
@@ -687,61 +626,6 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	return true;
 }
 
-bool LaneDetector::old_filter_pose_estimate(Vec4f& lane_segment, float& d, float& phi)
-{
-	int t = 100;
-	Point2f _p1, _p2;
-	_p1.x = lane_segment[2] + t * lane_segment[0];
-	_p1.y = lane_segment[3] + t * lane_segment[1];
-	_p2.x = lane_segment[2] - t * lane_segment[0];
-	_p2.y = lane_segment[3] - t * lane_segment[1];
-
-	/* Set new origin */
-	_p1.x -= SEMI_IMAGE_WIDTH;
-	_p2.x -= SEMI_IMAGE_WIDTH;
-
-	Point2f p1, p2;
-	image_to_gnd(_p1.x, _p1.y, p1.x, p1.y);
-	image_to_gnd(_p2.x, _p2.y, p2.x, p2.y);
-
-	/* Swap if pi is higher */
-	if(p1.y > p2.y) {
-		Point2f tmp;
-		tmp = p1;
-		p1 = p2;
-		p2 = tmp;
-	}
-
-	/* Estimate d */
-	Point2f t_hat = p2 - p1;
-	normalize(t_hat);
-
-	/* Estimate phi */
-	phi = rad_to_deg(atan2f(t_hat.y, t_hat.x)) - 90.0f;
-
-	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
-
-	float d1 = inner_product(n_hat, p1);
-	float d2 = inner_product(n_hat, p2);
-
-	d = (d1 + d2) / 2; //lateral displacement
-
-#if 0
-	cv::line(
-		lane_mark_image,
-		p1, p2,
-		Scalar(0, 0, 255), 3, CV_AA
-	);
-
-	char debug_text[60];
-	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree <- Old filter", d, phi);
-	
-	putText(lane_mark_image, debug_text, Point(15, 40),
-		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
-#endif	
-
-	return true;
-}
 
 //Input a segment then generate a vote (d and phi)
 bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
