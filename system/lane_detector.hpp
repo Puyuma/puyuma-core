@@ -7,7 +7,7 @@
 #include <cv_bridge/cv_bridge.h>
 
 #define IMAGE_WIDTH 640.0 //pixel
-#define IMAGE_HEIGHT 280.0
+#define IMAGE_HEIGHT 380.0
 
 #define SEMI_IMAGE_WIDTH 320.0
 #define SEMI_IMAGE_HEIGHT 240.0
@@ -33,7 +33,9 @@
 #define HISTOGRAM_C_SIZE (int)((D_MAX - D_MIN) / DELTA_D) //d
 #define HISTOGRAM_FILTER_THRESHOLD (vote_count / 3)
 
-/* Hough transform parameter */
+/* Lane detector parameter */
+#define CANNY_THRESHOLD_1 175
+#define CANNY_THRESHOLD_2 250
 #define HOUGH_THRESHOLD 135
 
 using namespace std;
@@ -79,6 +81,8 @@ class LaneDetector {
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	bool edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result);
+	void find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image);
+	void segment_homography_transform(vector<Vec4f>& lines);
 	bool generate_vote(Vec4f& lane_segment, float& d, float& phi,
 		int left_or_right, int color);
 

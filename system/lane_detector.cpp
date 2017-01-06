@@ -380,6 +380,55 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 	return true;
 }
 
+void LaneDetector::find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image)
+{
+#ifdef __DEBUG__
+	cv::line(original_image, Point(0, IMAGE_HEIGHT / 2),
+		Point(IMAGE_WIDTH, IMAGE_HEIGHT / 2), Scalar(0, 0, 255), 2, CV_AA); 
+#endif
+	cv::Rect region(0, IMAGE_HEIGHT / 2, IMAGE_WIDTH, IMAGE_HEIGHT / 2);
+
+	roi_image = original_image(region);
+}
+
+void LaneDetector::segment_homography_transform(vector<Vec4f>& lines)
+{
+	cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
+                                         0.00661, -6.97268, 1599.55896,
+                                         0.00007, -0.00868, 1.00000);
+
+	for(size_t i = 0; i < lines.size(); i++) {
+		vector<Point2f> segment;
+		vector<Point2f> segment_transformed;
+
+		Point2f point;
+		point.x = lines[i][0];
+		point.y = lines[i][1];// + IMAGE_HEIGHT / 2;
+		segment.push_back(point);
+		point.x = lines[i][2];
+		point.y = lines[i][3];//  + IMAGE_HEIGHT / 2;
+		segment.push_back(point);
+
+		perspectiveTransform(segment, segment_transformed, H);
+
+		lines[i][0] = segment_transformed.at(0).x;
+		lines[i][1] = segment_transformed.at(0).y;
+		lines[i][2] = segment_transformed.at(1).x;
+		lines[i][3] = segment_transformed.at(1).y;
+
+		//ROS_INFO("p1(%f,%f) p2(%f,%f)", lines[i][0], lines[i][1], lines[i][2], lines[i][3]);
+	}
+}
+
+void shift_segment(vector<Vec4f>& lines)
+{
+	for(size_t i = 0; i < lines.size(); i++) {
+		lines[i][1] += IMAGE_HEIGHT / 2;
+		lines[i][3] += IMAGE_HEIGHT / 2;
+	}
+}
+
+
 bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi)
 {
 #if 0
@@ -388,11 +437,16 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 	homography_image.copyTo(raw_image);
 #endif
-	raw_image = test_homography_transform(raw_image);
+	/* Find the region of interest for lane */
+	cv::Mat roi_image;
+	find_region_of_interest(raw_image, roi_image);
+
+	//XXX:HACK
+	///*roi_image = */raw_image = test_homography_transform(raw_image);
 
 	/* RGB to HSV */
-	cv::cvtColor(raw_image, outer_hsv_image, COLOR_BGR2HSV);
-	cv::cvtColor(raw_image, inner_hsv_image, COLOR_BGR2HSV);
+	cv::cvtColor(roi_image, outer_hsv_image, COLOR_BGR2HSV);
+	cv::cvtColor(roi_image, inner_hsv_image, COLOR_BGR2HSV);
 
 	/* Binarization (Color thresholding) */
 	cv::inRange(
@@ -410,12 +464,13 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	);
 
 	cv::Mat outer_gray_image, inner_gray_image;
-	cv::cvtColor(raw_image, outer_gray_image, CV_BGR2GRAY);
-	cv::cvtColor(raw_image, inner_gray_image, CV_BGR2GRAY);
+	cv::cvtColor(roi_image, outer_gray_image, CV_BGR2GRAY);
+	cv::cvtColor(roi_image, inner_gray_image, CV_BGR2GRAY);
 
 	/* Canny */
 	cv::Mat preprocess_canny_image;
-	cv::Canny(outer_gray_image, preprocess_canny_image, 0, 100, 3);
+	cv::Canny(outer_gray_image, preprocess_canny_image, CANNY_THRESHOLD_1,
+		CANNY_THRESHOLD_2, 3);
 
 	/* Deliation */
 	Mat deliation_element = cv::getStructuringElement(MORPH_RECT, Size(3, 3));
@@ -433,9 +488,13 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
 
 	raw_image.copyTo(lane_mark_image);
+	shift_segment(outer_lines);
+	shift_segment(inner_lines);
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 
+	segment_homography_transform(outer_lines);
+	segment_homography_transform(inner_lines);
 
 	/* Histogram filtering */
 
