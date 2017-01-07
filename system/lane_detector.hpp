@@ -37,12 +37,24 @@
 #define CANNY_THRESHOLD_1 50
 #define CANNY_THRESHOLD_2 200
 #define HOUGH_THRESHOLD 150
+#define SIDE_DETECT_PIXEL_CNT 20
+#define SIDE_DETECT_THREDHOLD 14
 
 using namespace std;
 using namespace cv;
 
-enum SEGMENT_COLOR {WHITE, YELLOW, RED};
-enum {LEFT_EDGE, RIGHT_EDGE};
+enum SEGMENT_COLOR {WHITE, YELLOW, RED, UNKNOWN_COLOR};
+enum {LEFT_EDGE, RIGHT_EDGE, UNKNOWN_SIDE};
+
+typedef struct {
+	int side; //Left or right?
+
+	float x1;
+	float y1;
+
+	float x2;
+	float y2;
+} segment_t;
 
 class LaneDetector {
 	private:
@@ -62,6 +74,9 @@ class LaneDetector {
 
 	cv::Mat H; //Homography matrix
 
+	float roi_offset_x;
+	float roi_offset_y;
+
 	bool calibrate_mode;
 
 	ros::NodeHandle node;
@@ -80,11 +95,13 @@ class LaneDetector {
 	void homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image);
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
-	bool edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result);
+	bool single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment);
+	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
 	void find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image);
-	void segment_homography_transform(vector<Vec4f>& lines);
-	bool generate_vote(Vec4f& lane_segment, float& d, float& phi,
-		int left_or_right, int color);
+	void segment_homography_transform(vector<segment_t>& lines);
+	void segments_side_recognize(vector<Vec4f>& cv_segments,
+		vector<segment_t>& xeno_segments, cv::Mat& threshold_image);
+	bool generate_vote(segment_t& lane_segment, float& d, float& phi, int color);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);

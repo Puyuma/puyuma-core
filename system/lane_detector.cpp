@@ -35,6 +35,9 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 
 	yaml_path = _yaml_path;
 
+	roi_offset_x = 0;
+	roi_offset_y = IMAGE_HEIGHT / 2; 
+
 	if(calibrate_mode == true) {
         	outer_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
@@ -249,20 +252,21 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Sca
 	for(size_t i = 0; i < lines.size(); i++) {
 		Vec4f line = lines[i];
 		
-		int mid_x = (line[0] + line[2]) / 2;
-		int mid_y = (line[1] + line[3]) / 2;
-
-#if 0
-//#ifndef EDGE_DETECOR_TEST
-		cv::circle(lane_mark_image, Point(mid_x, mid_y), 3, dot_color, 2, CV_AA, 0);
-#endif
-
 #if 1
-		cv::line(lane_mark_image, Point(line[0], line[1]),
-			Point(line[2], line[3]), line_color, 3, CV_AA);
+		cv::line(lane_mark_image,
+			Point(line[0] + roi_offset_x, line[1] + roi_offset_y),
+			Point(line[2] + roi_offset_x, line[3] + roi_offset_y),
+			line_color, 3, CV_AA
+		);
 
-		cv::circle(lane_mark_image, Point(line[0], line[1]), 3, dot_color, 2, CV_AA, 0);
-		cv::circle(lane_mark_image, Point(line[2], line[3]), 3, dot_color, 2, CV_AA, 0);
+		cv::circle(lane_mark_image,
+			Point(line[0] + roi_offset_x, line[1] + roi_offset_y),
+			3, dot_color, 2, CV_AA, 0
+		);
+		cv::circle(lane_mark_image,
+			Point(line[2] + roi_offset_x, line[3] + roi_offset_y),
+			3, dot_color, 2, CV_AA, 0
+		);
 #endif
 	}  
 }
@@ -306,13 +310,18 @@ void LaneDetector::gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, fl
  * Check the hough transformed line is at the right or left edge of the lane
  * Return false if the result is undetermined
  */
-bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment, int& result)
+bool LaneDetector::single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment)
 {
+	/*
+	 * XXX:This function is not completed!
+	 *     The detectoion should be done on the homography plane!
+	 */
+
         Point2f p1, p2;
-        p1.x = lane_segment[0];
-        p1.y = lane_segment[1];
-        p2.x = lane_segment[2];
-        p2.y = lane_segment[3];
+        p1.x = lane_segment.x1;
+        p1.y = lane_segment.y1;
+        p2.x = lane_segment.x2;
+        p2.y = lane_segment.y2;
 
 	/* Swap if p1 is higher */
 	if(p1.y < p2.y) {
@@ -335,7 +344,7 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 	int left_cnt = 0, right_cnt = 0; //Left, right accumulator
 	int x, y;
 
-	for(int i = 0 ; i < 20; i++) {
+	for(int i = 0 ; i < SIDE_DETECT_PIXEL_CNT; i++) {
 		x = ceil(midpoint.x + n_hat.x * i);
 		y = ceil(midpoint.y + n_hat.y * i);
 
@@ -361,23 +370,58 @@ bool LaneDetector::edge_recognize(cv::Mat& threshold_image, Vec4f& lane_segment,
 
 	//ROS_INFO("L:%d R:%d", left_cnt, right_cnt);
 
-	if(left_cnt > 14 && right_cnt > 14) {return false;}
-	if(left_cnt < 14 && right_cnt < 14) {return false;}
-
-	if(left_cnt > 14) {result = LEFT_EDGE;}
-	if(right_cnt > 14) {result = RIGHT_EDGE;}
-
-#if 1
-	if(result == LEFT_EDGE) {
-		putText(lane_mark_image, "l", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
-			1, Scalar(0, 0, 255));
-	} else {
-			putText(lane_mark_image, "r", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
-			1, Scalar(0, 0, 255));
+	if(left_cnt > SIDE_DETECT_THREDHOLD && right_cnt > SIDE_DETECT_THREDHOLD) {
+		lane_segment.side = UNKNOWN_SIDE;
+		return false;
 	}
-#endif
+	if(left_cnt < SIDE_DETECT_THREDHOLD && right_cnt < SIDE_DETECT_THREDHOLD) {
+		lane_segment.side = UNKNOWN_SIDE;
+		return false;
+	}
+
+	if(left_cnt > SIDE_DETECT_THREDHOLD) {lane_segment.side = LEFT_EDGE;}
+	if(right_cnt > SIDE_DETECT_THREDHOLD) {lane_segment.side = RIGHT_EDGE;}
 
 	return true;
+}
+
+void LaneDetector::segments_side_recognize(vector<Vec4f>& cv_segments,
+	vector<segment_t>& xeno_segments, cv::Mat& threshold_image)
+{
+	for(size_t i = 0; i < cv_segments.size(); i++) {
+		segment_t new_xeno_segment;
+
+		new_xeno_segment.x1 = cv_segments[i][0];
+		new_xeno_segment.y1 = cv_segments[i][1];
+		new_xeno_segment.x2 = cv_segments[i][2];
+		new_xeno_segment.y2 = cv_segments[i][3];
+
+		single_edge_recognize(threshold_image, new_xeno_segment);
+
+		xeno_segments.push_back(new_xeno_segment);
+	}
+}
+
+void LaneDetector::draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& lane_segments)
+{
+	Point2f midpoint;
+	float x;
+	float y;
+
+	for(size_t i = 0; i < lane_segments.size(); i++) {
+		x = (lane_segments[i].x1 + lane_segments[i].x2) / 2 + roi_offset_x;
+		y = (lane_segments[i].y1 + lane_segments[i].y2) / 2 + roi_offset_y;
+		midpoint.x = x;
+		midpoint.y = y;
+
+		if(lane_segments.at(i).side == LEFT_EDGE) {
+			putText(lane_mark_image, "l", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
+				1, Scalar(0, 0, 255));
+		} else if(lane_segments.at(i).side == RIGHT_EDGE) {
+			putText(lane_mark_image, "r", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
+				1, Scalar(0, 0, 255));
+		}
+	}	
 }
 
 void LaneDetector::find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image)
@@ -391,7 +435,7 @@ void LaneDetector::find_region_of_interest(cv::Mat& original_image, cv::Mat& roi
 	roi_image = original_image(region);
 }
 
-void LaneDetector::segment_homography_transform(vector<Vec4f>& lines)
+void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
 {
 	cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
                                          0.00661, -6.97268, 1599.55896,
@@ -402,32 +446,23 @@ void LaneDetector::segment_homography_transform(vector<Vec4f>& lines)
 		vector<Point2f> segment_transformed;
 
 		Point2f point;
-		point.x = lines[i][0];
-		point.y = lines[i][1];// + IMAGE_HEIGHT / 2;
+		point.x = lines[i].x1 + roi_offset_x;
+		point.y = lines[i].y1 + roi_offset_y;
 		segment.push_back(point);
-		point.x = lines[i][2];
-		point.y = lines[i][3];//  + IMAGE_HEIGHT / 2;
+		point.x = lines[i].x2 + roi_offset_x;
+		point.y = lines[i].y2 + roi_offset_y;
 		segment.push_back(point);
 
 		perspectiveTransform(segment, segment_transformed, H);
 
-		lines[i][0] = segment_transformed.at(0).x;
-		lines[i][1] = segment_transformed.at(0).y;
-		lines[i][2] = segment_transformed.at(1).x;
-		lines[i][3] = segment_transformed.at(1).y;
+		lines[i].x1 = segment_transformed.at(0).x;
+		lines[i].y1 = segment_transformed.at(0).y;
+		lines[i].x2 = segment_transformed.at(1).x;
+		lines[i].y2 = segment_transformed.at(1).y;
 
 		//ROS_INFO("p1(%f,%f) p2(%f,%f)", lines[i][0], lines[i][1], lines[i][2], lines[i][3]);
 	}
 }
-
-void shift_segment(vector<Vec4f>& lines)
-{
-	for(size_t i = 0; i < lines.size(); i++) {
-		lines[i][1] += IMAGE_HEIGHT / 2;
-		lines[i][3] += IMAGE_HEIGHT / 2;
-	}
-}
-
 
 bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi)
 {
@@ -483,18 +518,25 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
 
 	/* Hough transform */
-	vector<Vec4f> outer_lines, inner_lines;
-	cv::HoughLinesP(outer_bitwise_and_image, outer_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
-	cv::HoughLinesP(inner_bitwise_and_image, inner_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
+	vector<Vec4f> outer_cv_lines, inner_cv_lines;
+	cv::HoughLinesP(outer_bitwise_and_image, outer_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
+	cv::HoughLinesP(inner_bitwise_and_image, inner_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
 
+	/* Convert to xeno segment and do the side detection */
+	vector<segment_t> outer_xeno_lines, inner_xeno_lines;
+	segments_side_recognize(outer_cv_lines, outer_xeno_lines, outer_threshold_image);
+	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
+
+#ifndef __DEBUG_PLOT__
 	raw_image.copyTo(lane_mark_image);
-	shift_segment(outer_lines);
-	shift_segment(inner_lines);
-	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
-	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
+	mark_lane(lane_mark_image, outer_cv_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
+	mark_lane(lane_mark_image, inner_cv_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
+	draw_segment_side(lane_mark_image, outer_xeno_lines);
+	draw_segment_side(lane_mark_image, inner_xeno_lines);
+#endif
 
-	segment_homography_transform(outer_lines);
-	segment_homography_transform(inner_lines);
+	segment_homography_transform(outer_xeno_lines);
+	segment_homography_transform(inner_xeno_lines);
 
 	/* Histogram filtering */
 
@@ -515,18 +557,10 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	xenobot::segmentArray segments_msg;
 
 	/* Generate the vote */
-	for(size_t i = 0; i < outer_lines.size(); i++) {
-		int left_or_right;
-		bool ret = 
-			edge_recognize(outer_threshold_image, outer_lines[i], left_or_right);
-
-		if(ret == true) {
-			//ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
-		} else {
-			continue; //Skip
+	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
+		if(generate_vote(outer_xeno_lines[i], d_i, phi_i, WHITE) == false) {
+			continue;
 		}
-
-		generate_vote(outer_lines[i], d_i, phi_i, left_or_right, WHITE);
 
 		phi_list.push_back(phi_i);
 		d_list.push_back(d_i);
@@ -551,18 +585,10 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
-	for(size_t i = 0; i < inner_lines.size(); i++) {
-		int left_or_right;
-		bool ret = 
-			edge_recognize(inner_threshold_image, inner_lines[i], left_or_right);
-
-		if(ret == true) {
-			//ROS_INFO("line is %s", left_or_right == LEFT_EDGE ? "left" : "right");
-		} else {
-			continue; //Skip
+	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
+		if(generate_vote(inner_xeno_lines[i], d_i, phi_i, YELLOW) == false) {
+			continue;
 		}
-
-		generate_vote(inner_lines[i], d_i, phi_i, left_or_right, YELLOW);
 
 		phi_list.push_back(phi_i);
 		d_list.push_back(d_i);
@@ -687,14 +713,18 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 
 //Input a segment then generate a vote (d and phi)
-bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
-	float& phi, int left_or_right, int color)
+bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
+	float& phi, int color)
 {
+	if(lane_segment.side == UNKNOWN_SIDE) {
+		return false;
+	}
+
 	Point2f _p1, _p2;
-	_p1.x = lane_segment[0];
-	_p1.y = lane_segment[1];
-	_p2.x = lane_segment[2];
-	_p2.y = lane_segment[3];
+	_p1.x = lane_segment.x1;
+	_p1.y = lane_segment.y1;
+	_p2.x = lane_segment.x2;
+	_p2.y = lane_segment.y2;
 
 	/* Set new origin */
 	_p1.x -= SEMI_IMAGE_WIDTH;
@@ -729,13 +759,13 @@ bool LaneDetector::generate_vote(Vec4f& lane_segment, float& d,
 	if(color == WHITE) {
 		d -= W / 2;
 
-		if(left_or_right == RIGHT_EDGE) {
+		if(lane_segment.side == RIGHT_EDGE) {
 			d -= L_W;
 		}
 	} else if(color == YELLOW) {
 		d += W / 2;
 
-		if(left_or_right == LEFT_EDGE) {
+		if(lane_segment.side == LEFT_EDGE) {
 			d += L_Y;
 		}
 	}
