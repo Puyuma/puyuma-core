@@ -34,9 +34,9 @@
 #define HISTOGRAM_FILTER_THRESHOLD (vote_count / 3)
 
 /* Lane detector parameter */
-#define CANNY_THRESHOLD_1 175
-#define CANNY_THRESHOLD_2 250
-#define HOUGH_THRESHOLD 135
+#define CANNY_THRESHOLD_1 50
+#define CANNY_THRESHOLD_2 200
+#define HOUGH_THRESHOLD 150
 
 using namespace std;
 using namespace cv;
