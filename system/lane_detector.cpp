@@ -426,13 +426,27 @@ void LaneDetector::draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>
 
 void LaneDetector::find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image)
 {
-#ifdef __DEBUG__
-	cv::line(original_image, Point(0, IMAGE_HEIGHT / 2),
-		Point(IMAGE_WIDTH, IMAGE_HEIGHT / 2), Scalar(0, 0, 255), 2, CV_AA); 
-#endif
 	cv::Rect region(0, IMAGE_HEIGHT / 2, IMAGE_WIDTH, IMAGE_HEIGHT / 2);
 
 	roi_image = original_image(region);
+}
+
+void LaneDetector::draw_region_of_interest(cv::Mat lane_mark_image)
+{
+	Point2f p1(0, roi_offset_y);
+	Point2f p2(IMAGE_WIDTH, roi_offset_y);
+	Point2f p3(IMAGE_WIDTH, IMAGE_HEIGHT);
+	Point2f p4(0, IMAGE_HEIGHT);
+
+	cv::line(lane_mark_image, p1, p2, Scalar(255, 128, 0), 2, CV_AA);
+	cv::line(lane_mark_image, p2, p3, Scalar(255, 128, 0), 2, CV_AA);
+	cv::line(lane_mark_image, p3, p4, Scalar(255, 128, 0), 2, CV_AA);
+	cv::line(lane_mark_image, p4, p1, Scalar(255, 128, 0), 2, CV_AA);
+
+	putText(lane_mark_image, "Region of interest",
+		Point(roi_offset_x + 10, IMAGE_HEIGHT - 10), 
+		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(255, 128, 0)
+	);
 }
 
 void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
@@ -533,6 +547,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	mark_lane(lane_mark_image, inner_cv_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
 	draw_segment_side(lane_mark_image, outer_xeno_lines);
 	draw_segment_side(lane_mark_image, inner_xeno_lines);
+	draw_region_of_interest(lane_mark_image);
 #endif
 
 	segment_homography_transform(outer_xeno_lines);
@@ -698,13 +713,13 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	}
 #else
 	/* Debug plot */
-	putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
+	putText(lane_mark_image, "Self-driving mode on", Point(10, 15),
 		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 
 	/* 65 for two filter parallel display  */
 	char debug_text[60];
 	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d_mean, phi_mean);
-	putText(lane_mark_image, debug_text, Point(15, 40),
+	putText(lane_mark_image, debug_text, Point(10, 40),
 		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
 #endif
 

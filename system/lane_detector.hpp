@@ -7,7 +7,7 @@
 #include <cv_bridge/cv_bridge.h>
 
 #define IMAGE_WIDTH 640.0 //pixel
-#define IMAGE_HEIGHT 380.0
+#define IMAGE_HEIGHT 480.0
 
 #define SEMI_IMAGE_WIDTH 320.0
 #define SEMI_IMAGE_HEIGHT 240.0
@@ -98,6 +98,7 @@ class LaneDetector {
 	bool single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment);
 	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
 	void find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image);
+	void draw_region_of_interest(cv::Mat lane_mark_image);
 	void segment_homography_transform(vector<segment_t>& lines);
 	void segments_side_recognize(vector<Vec4f>& cv_segments,
 		vector<segment_t>& xeno_segments, cv::Mat& threshold_image);
