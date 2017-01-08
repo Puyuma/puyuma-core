@@ -9,11 +9,11 @@
 
 using namespace std;
 
-enum {
+enum ControllerMode {
 	JOYSTICK_MODE,
 	SELF_DRIVING_MODE,
 	STOP_MODE
-} ControllerMode;
+};
 
 typedef struct {
 	float kp, ki, kd;
