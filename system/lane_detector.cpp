@@ -40,25 +40,25 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 
 	if(calibrate_mode == true) {
         	outer_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 1000);
+			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 10);
 
 		outter_hough_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 1000);
+			node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 10);
 
        		canny_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/canny_image", 1000);
+			node.advertise<sensor_msgs::Image>("xenobot/canny_image", 10);
 
        		inner_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 1000);
+			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 10);
 
 		inner_hough_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 1000);
+			node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 10);
 
 	        marked_image_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 1000);
+			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 10);
 
 		histogram_publisher =
-			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 1000);;
+			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 10);;
 	}
 }
 
