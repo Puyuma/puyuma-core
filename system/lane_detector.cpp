@@ -389,18 +389,18 @@ bool LaneDetector::single_edge_recognize(cv::Mat& threshold_image, segment_t& la
 
 		/* Do saturation if out of boundary */
 		bound(0, IMAGE_WIDTH, x);
-		bound(0, IMAGE_HEIGHT, y);
+		bound(0, IMAGE_HEIGHT / 2, y);
 
 		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			left_cnt++;
 		}
 
-		/* Do saturation if out of boundary */
-		bound(0, IMAGE_WIDTH, x);
-		bound(0, IMAGE_HEIGHT, y);
-
 		x = ceil(midpoint.x - n_hat.x * i);
 		y = ceil(midpoint.y - n_hat.y * i);
+
+		/* Do saturation if out of boundary */
+		bound(0, IMAGE_WIDTH, x);
+		bound(0, IMAGE_HEIGHT / 2, y);
 
 		if(threshold_image.at<uint8_t>(Point(x, y)) >= 255) {
 			right_cnt++;
@@ -570,6 +570,10 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	vector<segment_t> outer_xeno_lines, inner_xeno_lines;
 	segments_side_recognize(outer_cv_lines, outer_xeno_lines, outer_threshold_image);
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
+
+	if(outer_xeno_lines.size() == 0 || inner_xeno_lines.size() == 0) {
+		return false;
+	}
 
 #ifndef __DEBUG_PLOT__
 	raw_image.copyTo(lane_mark_image);

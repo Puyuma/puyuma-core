@@ -76,6 +76,26 @@ roslaunch xenobot activate_controller.launch veh:=machine_name
 rosrun xenobot scatter_view_node.py
 ```
 
+##GDB
+
+1. Use **ps** command find the process ID
+
+```
+ps aux
+```
+
+2. Enter GDB or CGDB
+
+```
+cgdb
+```
+
+3. Attatch the process
+
+```
+attach **PROCESS_ID**
+```
+
 ##Trobleshooting
 
 **Authentication to remote computer[ubuntu@192.168.0.102:22] failed.

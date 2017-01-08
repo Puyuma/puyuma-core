@@ -30,6 +30,6 @@ bool load_pid_param(string _yaml_path);
 void self_driving_controller(float d, float phi);
 void pid_halt();
 
-void bound(int min, int max, int x);
+void bound(int min, int max, int& x);
 
 #endif
