@@ -231,28 +231,6 @@ void LaneDetector::save_thresholding_yaml()
 	}
 }
 
-void LaneDetector::line_fitting(vector<Vec4f>& lines, Vec4f& best_fitted_line)
-{
-	/* OpenCV returns a normalized vector (vx, vy),
-	   and (x0, y0), a point on the fitted line*/
-
-	//best_fitted_line[0] -> vx
-	//best_fitted_line[1] -> vy
-	//best_fitted_line[2] -> x0
-	//best_fitted_line[3] -> x1
-
-	//The equation of this line is:
-        //(x,y) = (x0,y0) + t * (vx, vy)
-
-	std::vector<Point2f> points;
-	for(size_t i = 0; i < lines.size(); i++) {
-		points.push_back(Point2f(lines[i][0], lines[i][1]));
-		points.push_back(Point2f(lines[i][2], lines[i][3]));
-	}
-
-	cv::fitLine(Mat(points), best_fitted_line ,CV_DIST_L2, 0, 0.01, 0.01);
-}
-
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
 {
 	char text[50] = {'\0'};
@@ -351,27 +329,6 @@ void LaneDetector::draw_bird_view_image(cv::Mat& bird_view_image,
 			inner_segment_color, 3, CV_AA
 		);
 	}
-}
-
-void LaneDetector::homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image)
-{
-	cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
-		0.00661, -6.97268, 1599.55896,
-		0.00007, -0.00868, 1.00000);
-
-	warpPerspective(raw_image, homograhy_image, H, raw_image.size());
-}
-
-cv::Mat test_homography_transform(cv::Mat& rectified_image)
-{
-        cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
-                                         0.00661, -6.97268, 1599.55896,
-                                         0.00007, -0.00868, 1.00000);
-
-        cv::Mat homograhy_image;
-        warpPerspective(rectified_image, homograhy_image, H, rectified_image.size());
-
-        return homograhy_image;
 }
 
 /* Convert image size from pixel to centimeter */
@@ -562,18 +519,9 @@ void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
 
 bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi)
 {
-#if 0
-	cv::Mat homography_image;
-	homography_transform(raw_image, homography_image);
-
-	homography_image.copyTo(raw_image);
-#endif
 	/* Find the region of interest for lane */
 	cv::Mat roi_image;
 	find_region_of_interest(raw_image, roi_image);
-
-	//XXX:HACK
-	///*roi_image = */raw_image = test_homography_transform(raw_image);
 
 	/* RGB to HSV */
 	cv::cvtColor(roi_image, outer_hsv_image, COLOR_BGR2HSV);

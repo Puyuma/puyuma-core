@@ -94,7 +94,6 @@ class LaneDetector {
 	Point3f point_transform_image_to_ground(int pixel_x, int pixel_y);
 	void append_yaml_data(YAML::Emitter& yaml_handler, string key, int value);
 	void line_fitting(vector<Vec4f>& lines, Vec4f& best_fitted_line);
-	void homography_transform(cv::Mat& raw_image, cv::Mat& homograhy_image);
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	bool single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment);
