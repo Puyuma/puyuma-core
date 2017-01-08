@@ -18,8 +18,8 @@
 #define BOARD_HEIGHT 4.0
 
 /* Lane parameters */
-#define L_W 4.5 //cm
-#define L_Y 4.5
+#define L_W 5.0 //cm
+#define L_Y 2.5
 #define W 16.5
 
 /* Historgram filter parameters */
@@ -36,7 +36,7 @@
 /* Lane detector parameter */
 #define CANNY_THRESHOLD_1 50
 #define CANNY_THRESHOLD_2 200
-#define HOUGH_THRESHOLD 150
+#define HOUGH_THRESHOLD 50
 #define SIDE_DETECT_PIXEL_CNT 20
 #define SIDE_DETECT_THREDHOLD 14
 
