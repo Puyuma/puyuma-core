@@ -70,7 +70,8 @@ class LaneDetector {
 
 	cv::Mat outer_hsv_image, outer_threshold_image, outer_hough_image;
 	cv::Mat inner_hsv_image, inner_threshold_image, inner_hough_image;
-	cv::Mat lane_mark_image, canny_image;
+	cv::Mat lane_mark_image, bird_view_image;
+	cv::Mat canny_image;
 
 	cv::Mat H; //Homography matrix
 
@@ -84,6 +85,7 @@ class LaneDetector {
         ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher canny_img_publisher;
 	ros::Publisher marked_image_publisher;
+	ros::Publisher bird_view_img_publisher;
 	ros::Publisher histogram_publisher;
 
 	bool read_threshold_setting(string yaml_path);
@@ -97,6 +99,9 @@ class LaneDetector {
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	bool single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment);
 	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
+	void draw_bird_view_image(cv::Mat& bird_view_image,
+		vector<segment_t>& outer_segments, Scalar outer_segment_color,
+		vector<segment_t>& inner_segments, Scalar inner_segment_color);
 	void find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image);
 	void draw_region_of_interest(cv::Mat lane_mark_image);
 	void segment_homography_transform(vector<segment_t>& lines);
