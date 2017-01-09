@@ -224,7 +224,7 @@ void LaneDetector::save_thresholding_yaml()
 	fstream fp;
 	fp.open(file_path.c_str(), ios::out);
 
-	if(fp != 0) {
+	if(!fp) {
 		fp << out.c_str() << endl; //Write yaml
 	} else {
 		ROS_INFO("Failed to save the thresholding setting!");

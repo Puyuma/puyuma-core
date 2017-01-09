@@ -1,6 +1,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <thread>
 
 #include <highgui.h>
 #include <cv.h>
@@ -19,6 +20,8 @@
 using namespace cv;
 
 LaneDetector* lane_detector;
+cv::Mat camera_matrix, distort_coffecient;
+
 
 //Joystick
 bool joystick_triggered;
@@ -26,6 +29,11 @@ ros::Time joystick_trigger_time;
 
 //JOYSTICK_MODE, SELF_DRIVING_MODE, STOP_MODE
 int mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+
+ros::Publisher raw_image_publisher;
+ros::Publisher distort_image_publisher;
+ros::Subscriber threshold_setting_subscriber;
+ros::Subscriber wheel_command_subscriber;
 
 void handle_joystick()
 {
@@ -65,25 +73,9 @@ void wheel_command_callback(const xenobot::wheel_command& wheel_msg)
 	}
 }
 
-int main(int argc, char* argv[])
+void load_yaml_parameter()
 {
-	/* ROS initialization */
-	ros::init(argc, argv, "xenobot");
-        ros::Time::init();
 	ros::NodeHandle nh;
-        ros::Rate loop_rate(30);
-
-	ros::NodeHandle node;
-
-	ros::Publisher raw_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 1000);
-	ros::Publisher distort_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 1000);
-
-	ros::Subscriber threshold_setting_subscriber =
-		node.subscribe("/xenobot/calibration/threshold_setting", 1000, threshold_setting_callback);
-	ros::Subscriber wheel_command_subscriber =
-		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
 
 	/* Read ROS parameters */
 	string machine_name;
@@ -91,14 +83,14 @@ int main(int argc, char* argv[])
 		ROS_INFO("Abort: no machine name assigned!");
 		ROS_INFO("you may try:");
 		ROS_INFO("roslaunch xenobot activate_controller veh:=machine_name");
-		return 0;
+		return;
 	}
 
 	string yaml_path;
 	if(nh.getParam("config_path", yaml_path) == false) {
 		ROS_INFO("Abort: no configuration path assigned!");
 		ROS_INFO("Instead of doing rosrun command, you should try roslaunch command");
-		return 0;
+		return;
 	}
 
 	bool calibrate_mode;
@@ -116,17 +108,16 @@ int main(int argc, char* argv[])
 
 	//Load extrinsic calibration data and color thresholding setting
 	if(lane_detector->load_yaml_setting() == false) {
-		return 0;
+		return;
 	}
 
 	//Load intrinsic calibration data
-	cv::Mat camera_matrix, distort_coffecient;
-
 	if(load_intrinsic_calibration(yaml_path + machine_name + "/",
 		camera_matrix, distort_coffecient) == false) {
-		return 0;
+		return;
 	}
 
+	//Load motor calibration data
 	if(read_motor_calibration(yaml_path + machine_name + "/") == false) {
 		ROS_INFO("Can't find motor calibration data, load default.");
 	}
@@ -136,18 +127,18 @@ int main(int argc, char* argv[])
 		ROS_INFO("PID parameter is not exist, load the default setting!");
 	}
 
-	/* Setup Raspicam */
+}
+
+void self_driving_thread()
+{
 	raspicam::RaspiCam_Cv camera;
 
 	if(!camera_setup(camera)) {
 		ROS_INFO("Abort: failed to open pi camera!");
-		return 0;
+		return;
 	}
 
-        cv::Mat frame;
-
-	/* Motor initialization */
-	motor_init();
+	cv::Mat frame;
 
 	while(1) {
 		camera.grab();
@@ -157,6 +148,7 @@ int main(int argc, char* argv[])
 
 		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);
 
+#ifndef __PUBLISH_IMAGE__
 		sensor_msgs::ImagePtr raw_img_msg =
 			cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
 
@@ -165,6 +157,7 @@ int main(int argc, char* argv[])
 
 		raw_image_publisher.publish(raw_img_msg);
 		distort_image_publisher.publish(distort_img_msg);
+#endif
 
 		/* Lane estimation */
 		float d = 0, phi = 0;
@@ -194,6 +187,35 @@ int main(int argc, char* argv[])
 			ROS_INFO("Can't estimate the lane pose, too many noise!");
 		}
 	}
+
+}
+
+int main(int argc, char* argv[])
+{
+	/* ROS initialization */
+	ros::init(argc, argv, "xenobot");
+        ros::Time::init();
+        ros::Rate loop_rate(30);
+
+	ros::NodeHandle node;
+
+	raw_image_publisher = 
+		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 1000);
+	distort_image_publisher = 
+		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 1000);
+	threshold_setting_subscriber =
+		node.subscribe("/xenobot/calibration/threshold_setting", 1000, threshold_setting_callback);
+	wheel_command_subscriber =
+		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
+
+	load_yaml_parameter();
+
+	/* Motor initialization */
+	motor_init();
+
+	thread self_driving_core_thread(self_driving_thread);
+
+	while(1);
 
 	return 0;
 }
