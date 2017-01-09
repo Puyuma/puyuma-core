@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <wiringPi.h>
 #include <softPwm.h>
+#include <yaml-cpp/yaml.h>
 
 #include "motor.hpp"
 #include "controller.hpp"
@@ -9,6 +10,25 @@
 #define L298N_IN2 1
 #define L298N_IN3 4
 #define L298N_IN4 26
+
+int motor_pwm_bias;
+
+bool read_motor_calibration(string _yaml_path)
+{
+	try {
+		YAML::Node yaml = YAML::LoadFile(_yaml_path + "motor.yaml");
+		ROS_INFO("%s", _yaml_path.c_str());
+
+		motor_pwm_bias = (int)(yaml["motor_bias"].as<float>() * MOTOR_PWM_MAX);
+		ROS_INFO("Motor bias: %d", motor_pwm_bias);
+	} catch(...) {
+		motor_pwm_bias = 0;
+
+		return false;
+	}
+
+	return true;
+}
 
 void motor_init()
 {
@@ -44,8 +64,8 @@ void test_motor()
 
 void set_motor_pwm(int8_t left_pwm, int8_t right_pwm)
 {
-	softPwmWrite(L298N_IN4, right_pwm);
-	softPwmWrite(L298N_IN2, left_pwm);
+	softPwmWrite(L298N_IN4, right_pwm + motor_pwm_bias);
+	softPwmWrite(L298N_IN2, left_pwm - motor_pwm_bias);
 }
 
 void halt_motor()
