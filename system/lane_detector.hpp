@@ -6,8 +6,8 @@
 #include <yaml-cpp/yaml.h>
 #include <cv_bridge/cv_bridge.h>
 
-#define IMAGE_WIDTH 640.0 //pixel
-#define IMAGE_HEIGHT 480.0
+#define IMAGE_WIDTH 320.0 //pixel
+#define IMAGE_HEIGHT 240.0
 
 #define SEMI_IMAGE_WIDTH 320.0
 #define SEMI_IMAGE_HEIGHT 240.0

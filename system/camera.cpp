@@ -56,9 +56,10 @@ bool load_intrinsic_calibration(string yaml_path,
 
 bool camera_setup(raspicam::RaspiCam_Cv& camera)
 {
+	camera.set(CV_CAP_PROP_FPS, 30);
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+	camera.set(CV_CAP_PROP_FRAME_WIDTH, (int)IMAGE_WIDTH);
+	camera.set(CV_CAP_PROP_FRAME_HEIGHT, (int)IMAGE_HEIGHT);
 	camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
 	camera.set(CV_CAP_PROP_CONTRAST, 50);
 	camera.set(CV_CAP_PROP_SATURATION, 100);
