@@ -127,6 +127,10 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	if(read_motor_calibration(yaml_path + machine_name + "/") == false) {
+		ROS_INFO("Can't find motor calibration data, load default.");
+	}
+
 	//Load PID parameters
 	if(load_pid_param(yaml_path + machine_name + "/") == false) {
 		ROS_INFO("PID parameter is not exist, load the default setting!");
@@ -175,6 +179,11 @@ int main(int argc, char* argv[])
 			handle_joystick();
 			continue;
 		}
+
+#if 0 //Tune motor bias
+		set_motor_pwm(70, 70);	
+		continue;
+#endif
 
 		/* PID controller */
 		if(get_pose == true) {

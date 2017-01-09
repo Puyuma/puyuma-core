@@ -571,7 +571,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_side_recognize(outer_cv_lines, outer_xeno_lines, outer_threshold_image);
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
 
-	if(outer_xeno_lines.size() == 0 || inner_xeno_lines.size() == 0) {
+	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
 		return false;
 	}
 
