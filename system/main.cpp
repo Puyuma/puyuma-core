@@ -10,6 +10,8 @@
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
 
+#include "queue.hpp"
+
 #include <xenobot/threshold_setting.h>
 #include <xenobot/wheel_command.h>
 #include "lane_detector.hpp"
@@ -34,6 +36,8 @@ ros::Publisher raw_image_publisher;
 ros::Publisher distort_image_publisher;
 ros::Subscriber threshold_setting_subscriber;
 ros::Subscriber wheel_command_subscriber;
+
+Queue<cv::Mat> raw_image_queue;
 
 void handle_joystick()
 {
@@ -129,7 +133,7 @@ void load_yaml_parameter()
 
 }
 
-void self_driving_thread()
+void camera_thread_handler()
 {
 	raspicam::RaspiCam_Cv camera;
 
@@ -143,6 +147,19 @@ void self_driving_thread()
 	while(1) {
 		camera.grab();
 		camera.retrieve(frame);
+
+		raw_image_queue.push(frame);
+
+		std::this_thread::yield();
+	}
+}
+
+void self_driving_thread_handler()
+{
+	cv::Mat frame;
+
+	while(1) {
+		raw_image_queue.pop(frame);
 
 		cv::Mat distort_image;
 
@@ -186,6 +203,8 @@ void self_driving_thread()
 
 			ROS_INFO("Can't estimate the lane pose, too many noise!");
 		}
+
+		std::this_thread::yield();
 	}
 
 }
@@ -213,9 +232,11 @@ int main(int argc, char* argv[])
 	/* Motor initialization */
 	motor_init();
 
-	thread self_driving_core_thread(self_driving_thread);
+	/* Threads */
+	thread self_driving_thread(self_driving_thread_handler);
+	thread camera_thread(camera_thread_handler);
 
-	while(1);
+	pause();
 
 	return 0;
 }
