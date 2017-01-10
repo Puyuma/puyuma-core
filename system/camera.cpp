@@ -8,6 +8,8 @@
 #include <raspicam/raspicam_cv.h>
 #include <yaml-cpp/yaml.h>
 
+#include "lane_detector.hpp"
+
 using namespace std;
 
 bool load_intrinsic_calibration(string yaml_path,
