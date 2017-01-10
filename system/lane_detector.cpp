@@ -144,7 +144,7 @@ bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 			homography_array[i] = yaml["homography_matrix"]["data"][i].as<double>();
 		}
 
-		H = cv::Mat(3, 3, CV_64F, homography_array);
+		H = new cv::Mat(3, 3, CV_64F, homography_array);
 	} catch(...) {
 		return false;
 	}
@@ -490,10 +490,6 @@ void LaneDetector::draw_region_of_interest(cv::Mat lane_mark_image)
 
 void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
 {
-	cv::Mat H = (cv::Mat1d(3, 3) << -2.69663, -2.79935, 1201.62048,
-                                         0.00661, -6.97268, 1599.55896,
-                                         0.00007, -0.00868, 1.00000);
-
 	for(size_t i = 0; i < lines.size(); i++) {
 		vector<Point2f> segment;
 		vector<Point2f> segment_transformed;
@@ -506,7 +502,7 @@ void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
 		point.y = lines[i].y2 + roi_offset_y;
 		segment.push_back(point);
 
-		perspectiveTransform(segment, segment_transformed, H);
+		perspectiveTransform(segment, segment_transformed, *H);
 
 		lines[i].x1 = segment_transformed.at(0).x;
 		lines[i].y1 = segment_transformed.at(0).y;

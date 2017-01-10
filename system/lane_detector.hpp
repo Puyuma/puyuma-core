@@ -73,7 +73,7 @@ class LaneDetector {
 	cv::Mat lane_mark_image, bird_view_image;
 	cv::Mat canny_image;
 
-	cv::Mat H; //Homography matrix
+	cv::Mat* H; //Homography matrix
 
 	float roi_offset_x;
 	float roi_offset_y;
