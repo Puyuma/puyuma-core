@@ -34,12 +34,6 @@ cd $(YOUR_CATKIN_WS)
 catkin_make
 ```
 
-###4. Setup the rc.local file (Prevent motor rotate before activate the controller)
-
-```
-sudo cp rc.local /etc/rc.local
-```
-
 ##Calibration
 
 You must do the calibration before first time initiating the controller.
