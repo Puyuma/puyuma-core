@@ -455,10 +455,10 @@ void LaneDetector::draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>
 
 		if(lane_segments.at(i).side == LEFT_EDGE) {
 			putText(lane_mark_image, "l", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
-				1, Scalar(0, 0, 255));
+				1, Scalar(0, 0.7, 255));
 		} else if(lane_segments.at(i).side == RIGHT_EDGE) {
 			putText(lane_mark_image, "r", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
-				1, Scalar(0, 0, 255));
+				1, Scalar(0, 0.7, 255));
 		}
 	}	
 }
@@ -484,7 +484,7 @@ void LaneDetector::draw_region_of_interest(cv::Mat lane_mark_image)
 
 	putText(lane_mark_image, "Region of interest",
 		Point(roi_offset_x + 10, IMAGE_HEIGHT - 10), 
-		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(255, 128, 0)
+		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(255, 128, 0)
 	);
 }
 
@@ -747,23 +747,23 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 #if 0
 	if(mid_lines.size() == 0) {
 		putText(lane_mark_image, "Error: Cannot detect any segment", Point(15, 15),
-                FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 0, 255));
+                FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 0, 255));
 
 		//return false;
 	} else {
 		putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
-                FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
+                FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
 	}
 #else
 	/* Debug plot */
 	putText(lane_mark_image, "Self-driving mode on", Point(10, 15),
-		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
+		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
 
 	/* 65 for two filter parallel display  */
 	char debug_text[60];
 	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d_mean, phi_mean);
 	putText(lane_mark_image, debug_text, Point(10, 40),
-		FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(0, 255, 0));
+		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
 #endif
 
 	return true;
