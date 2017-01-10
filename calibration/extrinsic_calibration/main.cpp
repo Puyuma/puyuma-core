@@ -56,7 +56,7 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 	int board_w = 7, board_h = 5;
 	cv::Size board_size(board_w, board_h);
 
-	bool found = findChessboardCorners(rectified_image, board_size, corners, CALIB_CB_ADAPTIVE_THRESH);
+	bool found = findChessboardCorners(rectified_image, board_size, corners, CV_CALIB_CB_ADAPTIVE_THRESH);
 
 	/* Check the board if found or not */
 	if(found == true) {
@@ -143,14 +143,14 @@ int main(int argc, char* argv[])
 
 	/* Setup Raspicam */
 	raspicam::RaspiCam_Cv camera;
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-	//camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
-	//camera.set(CV_CAP_PROP_CONTRAST, 50);
-	//camera.set(CV_CAP_PROP_SATURATION, 50);
-	//camera.set(CV_CAP_PROP_GAIN, 50);
-	//camera.set(CV_CAP_PROP_EXPOSURE, 10);
+	camera.set(CV_CAP_PROP_FORMAT, CV_8UC1);
+	camera.set(CV_CAP_PROP_FRAME_WIDTH, 320);
+	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+	camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
+	camera.set(CV_CAP_PROP_CONTRAST, 50);
+	camera.set(CV_CAP_PROP_SATURATION, 100);
+	camera.set(CV_CAP_PROP_GAIN, 1);
+	camera.set(CV_CAP_PROP_EXPOSURE, 10);
 	//camera.set(CV_CAP_PROP_WHITE_BALANCE_RED_V, 1);
 	//camera.set(CV_CAP_PROP_WHITE_BALANCE_BLUE_U, 1);
 
@@ -168,16 +168,17 @@ int main(int argc, char* argv[])
 		camera.grab();
 		camera.retrieve(raw_image);
 
-		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 279.087996, 0.000000, 329.895256, 0.000000, 278.852468, 189.532203, 0.000000, 0.000000, 1.000000);
-		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) << -0.275519, 0.051598, 0.003164, -0.000453, 0.000000);
+		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 136.106985, 0.000000, 166.663269,
+							0.000000, 136.627212, 105.393529,
+							0.000000, 0.000000, 1.000000);
+		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) <<
+			-0.246384, 0.037375, 0.000300, -0.001282, 0.000000);
 
 		cv::Mat distort_image;
 		cv::undistort(raw_image, distort_image, camera_matrix, distort_coffecient);
 
 		if(get_H == false) {
-			cv::cvtColor(distort_image, grey_image, cv::COLOR_BGR2GRAY);
-
-			if(estimate_homography(grey_image, H) == true) {
+			if(estimate_homography(distort_image, H) == true) {
 				get_H = true;
 			}
 		} else {
