@@ -38,8 +38,6 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	roi_offset_x = 0;
 	roi_offset_y = IMAGE_HEIGHT / 2; 
 
-	bird_view_image = Mat::zeros(IMAGE_HEIGHT, IMAGE_WIDTH * 2, CV_8UC3);
-
 	if(calibrate_mode == true) {
         	outer_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 10);
@@ -257,78 +255,9 @@ void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Sca
 	}  
 }
 
-void LaneDetector::draw_bird_view_image(cv::Mat& bird_view_image,
-	vector<segment_t>& outer_segments, Scalar outer_segment_color,
-	vector<segment_t>& inner_segments, Scalar inner_segment_color)
+void LaneDetector::draw_bird_view_image(cv::Mat& original_image, cv::Mat& bird_view_image)
 {
-	if(outer_segments.size() <= 0 || inner_segments.size() <= 0) {
-		return;
-	}
-
-	float min_x, max_x;
-	if(outer_segments[0].x1 > outer_segments[0].x2) {
-		max_x = outer_segments[0].x1;
-		min_x = outer_segments[0].x2;
-	} else {
-		max_x = outer_segments[0].x2;
-		min_x = outer_segments[0].x1;
-	}
-
-	//Find minimum x and maximum x
-	for(size_t i = 1; i < outer_segments.size(); i++) {
-		if(outer_segments[i].x1 < min_x) {
-			min_x = outer_segments[i].x1;
-		}
-
-		if(outer_segments[i].x2 < min_x) {
-			min_x = outer_segments[i].x2;
-		}
-
-		if(outer_segments[i].x1 > max_x) {
-			max_x = outer_segments[i].x1;
-		}
-
-		if(outer_segments[i].x2 > max_x) {
-			max_x = outer_segments[i].x2;
-		}
-	}
-
-	for(size_t i = 0; i < inner_segments.size(); i++) {
-		if(inner_segments[i].x1 < min_x) {
-			min_x = inner_segments[i].x1;
-		}
-
-		if(inner_segments[i].x2 < min_x) {
-			min_x = inner_segments[i].x2;
-		}
-
-		if(inner_segments[i].x1 > max_x) {
-			max_x = inner_segments[i].x1;
-		}
-
-		if(inner_segments[i].x2 > max_x) {
-			max_x = inner_segments[i].x2;
-		}
-	}
-
-	//Calculate offset segment to plot
-	float offset_x = ((max_x - min_x) / 2 + min_x) - (IMAGE_WIDTH);
-
-	for(size_t i = 0; i < outer_segments.size(); i++) {
-		cv::line(bird_view_image,
-			Point(outer_segments[i].x1 - offset_x, outer_segments[i].y1),
-			Point(outer_segments[i].x2 - offset_x, outer_segments[i].y2),
-			outer_segment_color, 3, CV_AA
-		);
-	}
-
-	for(size_t i = 0; i < inner_segments.size(); i++) {
-		cv::line(bird_view_image,
-			Point(inner_segments[i].x1 - offset_x, outer_segments[i].y1),
-			Point(inner_segments[i].x2 - offset_x, outer_segments[i].y2),
-			inner_segment_color, 3, CV_AA
-		);
-	}
+	warpPerspective(original_image, bird_view_image, *H, original_image.size());
 }
 
 /* Convert image size from pixel to centimeter */
@@ -585,11 +514,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 #ifndef __DEBUG_PLOT__
 	//Bird view image
-	bird_view_image.setTo(cv::Scalar(0, 0, 0));
-	draw_bird_view_image(bird_view_image,
-		outer_xeno_lines, Scalar(255, 255, 255),
-		inner_xeno_lines, Scalar(0, 255, 255)
-	);
+	draw_bird_view_image(raw_image, bird_view_image);
 #endif
 
 	/* Histogram filtering */

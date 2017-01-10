@@ -98,9 +98,7 @@ class LaneDetector {
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	bool single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment);
 	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
-	void draw_bird_view_image(cv::Mat& bird_view_image,
-		vector<segment_t>& outer_segments, Scalar outer_segment_color,
-		vector<segment_t>& inner_segments, Scalar inner_segment_color);
+	void draw_bird_view_image(cv::Mat& original_image, cv::Mat& bird_view_image);
 	void find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image);
 	void draw_region_of_interest(cv::Mat lane_mark_image);
 	void segment_homography_transform(vector<segment_t>& lines);
