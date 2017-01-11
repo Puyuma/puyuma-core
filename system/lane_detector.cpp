@@ -441,7 +441,7 @@ void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
 	}
 }
 
-void LaneDetector::send_visualize_image_to_queue(
+void LaneDetector::send_sucess_visualize_image_thread(
 	/* Images */
 	cv::Mat distorted_image, cv::Mat canny_image,
 	cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
@@ -483,6 +483,75 @@ void LaneDetector::send_visualize_image_to_queue(
 	histogram_publisher.publish(segments_msg);
 
 	ROS_INFO("phi:%f | d:%f", phi, d);
+}
+
+void LaneDetector::send_failed_visualize_image_thread(
+	/* Images */
+	cv::Mat distorted_image, cv::Mat canny_image,
+	cv::Mat outer_threshold_image, cv::Mat inner_threshold_image)
+{
+	cv::Mat lane_mark_image = distorted_image;
+
+#if 1
+	/* Bird view image */
+	cv::Mat bird_view_image;
+	draw_bird_view_image(distorted_image, bird_view_image);
+#endif
+
+	draw_region_of_interest(lane_mark_image);
+
+	/* Draw car status */
+	putText(lane_mark_image, "Failed to estimate the lane", Point(10, 15),
+		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 0, 255));
+
+	publish_images(
+		lane_mark_image, canny_image,
+		outer_threshold_image, inner_threshold_image,
+		bird_view_image
+	);
+
+	ROS_INFO("Failed to estimate the lane");
+}
+
+
+void LaneDetector::send_visualize_image(
+	/* Images */
+	cv::Mat& distorted_image, cv::Mat& canny_image,
+	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
+	/* Segments */
+	vector<segment_t>& outer_lines, vector<segment_t>& inner_lines,
+	/* Pose */
+	float& d, float& phi, xenobot::segmentArray& segments_msg)
+{
+	thread send_image_thread(
+		&LaneDetector::send_sucess_visualize_image_thread,
+		this,
+		distorted_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		outer_lines, inner_lines,
+		d, phi, segments_msg
+	);
+
+	send_image_thread.detach();
+}
+
+void LaneDetector::send_visualize_image(
+	/* Images */
+	cv::Mat& distorted_image, cv::Mat& canny_image,
+	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image)
+{
+	thread send_image_thread(
+		&LaneDetector::send_failed_visualize_image_thread,
+		this,
+		distorted_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image
+	);
+
+	send_image_thread.detach();
 }
 
 bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi)
@@ -540,7 +609,13 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
 
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
-		pose_available = false;
+		send_visualize_image(
+			raw_image,
+			canny_image,
+			outer_threshold_image,
+			inner_threshold_image
+		);
+
 		return false;
 	}
 
@@ -644,7 +719,13 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	}
 
 	if(vote_box[highest_vote_i][highest_vote_j] < HISTOGRAM_FILTER_THRESHOLD) {
-		pose_available = false;
+		send_visualize_image(
+			raw_image,
+			canny_image,
+			outer_threshold_image,
+			inner_threshold_image
+		);
+
 		return false;
 	}
 
@@ -696,14 +777,22 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		}
 	}
 
-	if(phi_sample_cnt == 0) return false;
-	if(d_sample_cnt == 0) return false;
+	if(phi_sample_cnt == 0 || d_sample_cnt == 0) {
+		send_visualize_image(
+			raw_image,
+			canny_image,
+			outer_threshold_image,
+			inner_threshold_image
+		);
+
+		return false;
+	}
 
 	phi_mean /= (float)phi_sample_cnt;
 	d_mean /= (float)d_sample_cnt;
 
-	final_d = pose_d = d_mean;
-	final_phi = pose_phi = phi_mean;
+	final_d = d_mean;
+	final_phi = phi_mean;
 
 #if 1
 	//ROS message
@@ -713,9 +802,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_msg.segments.push_back(segment);
 #endif
 
-	thread send_image_thread(
-		&LaneDetector::send_visualize_image_to_queue,
-		this,
+	send_visualize_image(
 		raw_image,
 		canny_image,
 		outer_threshold_image,
@@ -723,8 +810,6 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		outer_xeno_lines, inner_xeno_lines,
 		final_d, final_phi, segments_msg
 	);
-
-	send_image_thread.detach();
 
 	return true;
 }

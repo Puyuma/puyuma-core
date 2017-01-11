@@ -91,10 +91,6 @@ class LaneDetector {
 
 	cv::Mat* H; //Homography matrix
 
-	float pose_d;
-	float pose_phi;
-	bool pose_available;
-
 	float roi_offset_x;
 	float roi_offset_y;
 
@@ -131,11 +127,25 @@ class LaneDetector {
 	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
 	void draw_bird_view_image(cv::Mat& original_image, cv::Mat& bird_view_image);
 	void draw_region_of_interest(cv::Mat lane_mark_image);
-	void send_visualize_image_to_queue(
+
+	void send_sucess_visualize_image_thread(
 		cv::Mat distorted_image, cv::Mat canny_image,
 		cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
 		vector<segment_t> outer_lines, vector<segment_t> inner_lines,
 		float d, float phi, xenobot::segmentArray segments_msg);
+
+	void send_failed_visualize_image_thread(
+		cv::Mat distorted_image, cv::Mat canny_image,
+		cv::Mat outer_threshold_image, cv::Mat inner_threshold_image);
+
+	void send_visualize_image(
+		cv::Mat& distorted_image, cv::Mat& canny_image,
+		cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
+		vector<segment_t>& outer_lines, vector<segment_t>& inner_lines,
+		float& d, float& phi, xenobot::segmentArray& segments_msg);
+
+	void send_visualize_image(cv::Mat& distorted_image, cv::Mat& canny_image,
+		cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);
