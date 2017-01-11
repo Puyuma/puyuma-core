@@ -136,25 +136,22 @@ bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 
 		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
-		double homography_array[9];
+		H = new cv::Mat(3, 3, CV_64F);
 
-		for(int i = 0; i < 9; i++) { 
-			homography_array[i] = yaml["homography_matrix"]["data"][i].as<double>();
-		}
+		ROS_INFO("Extrinsic matrix:");
 
-		H = new cv::Mat(3, 3, CV_64F, homography_array);
+			for(int i = 0; i < 3; i++) {
+				for(int j = 0; j < 3; j++) {
+					H->at<double>(i, j) =
+				yaml["homography_matrix"]["data"][i * 3 + j].as<double>();
+			}
 
-		cv::Mat _H;
-		H->copyTo(_H);
-		_H.convertTo(_H, CV_64F);
-
-		for(int i = 0; i < 3; i++) {
 			ROS_INFO("[%.5f %.5f %.5f]",
-				_H.at<double>(i, 0),
-				_H.at<double>(i, 1),
-				_H.at<double>(i, 2)
+				H->at<double>(i, 0),
+				H->at<double>(i, 1),
+				H->at<double>(i, 2)
 			);
-	        }
+		}
 	} catch(...) {
 		return false;
 	}
