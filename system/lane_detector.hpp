@@ -54,6 +54,9 @@ typedef struct {
 
 	float x2;
 	float y2;
+
+	float d;
+	float phi;
 } segment_t;
 
 class LaneDetector {
@@ -74,6 +77,10 @@ class LaneDetector {
 	cv::Mat canny_image;
 
 	cv::Mat* H; //Homography matrix
+
+	float pose_d;
+	float pose_phi;
+	bool pose_available;
 
 	float roi_offset_x;
 	float roi_offset_y;

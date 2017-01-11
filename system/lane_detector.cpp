@@ -506,6 +506,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
 
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
+		pose_available = false;
 		return false;
 	}
 
@@ -528,16 +529,9 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 	/* Histogram filtering */
 
-	//Single vote
-	float d_i = 0, phi_i = 0;
-
 	//Vote count
 	int vote_count = 0;
 	
-	//Save every phi and d
-	vector<float> phi_list;
-	vector<float> d_list;
-
 	/* 2D Histogram, size = row * column */
 	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
 
@@ -546,12 +540,16 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 	/* Generate the vote */
 	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
-		if(generate_vote(outer_xeno_lines[i], d_i, phi_i, WHITE) == false) {
+		float d_i, phi_i;
+
+		if(generate_vote(outer_xeno_lines.at(i), d_i, phi_i, WHITE) == false) {
+			outer_xeno_lines.erase(outer_xeno_lines.begin() + i);
 			continue;
 		}
 
-		phi_list.push_back(phi_i);
-		d_list.push_back(d_i);
+		outer_xeno_lines.at(i).d = d_i;
+		outer_xeno_lines.at(i).phi = phi_i;
+
 		vote_count++;
 
 		//Vote to ...
@@ -560,26 +558,33 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 		//Drop the vote if it is out of the boundary
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			outer_xeno_lines.erase(outer_xeno_lines.begin() + i) ;
 			continue;	
 		}
 
 		vote_box[_i][_j] += 1.0f; //Assume that every vote is equally important
 
+#if 1
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
 		segment.color = 0; //WHITE
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
+#endif
 	}
 
 	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
-		if(generate_vote(inner_xeno_lines[i], d_i, phi_i, YELLOW) == false) {
+		float d_i, phi_i;
+
+		if(generate_vote(inner_xeno_lines.at(i), d_i, phi_i, YELLOW) == false) {
+			inner_xeno_lines.erase(inner_xeno_lines.begin() + i);
 			continue;
 		}
 
-		phi_list.push_back(phi_i);
-		d_list.push_back(d_i);
+		inner_xeno_lines.at(i).d = d_i;
+		inner_xeno_lines.at(i).phi = phi_i;
+
 		vote_count++;
 
 		//Vote to ...
@@ -588,17 +593,20 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 		//Drop the vote if it is out of the boundary
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			inner_xeno_lines.erase(inner_xeno_lines.begin() + i);
 			continue;	
 		}
 
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
 
+#if 1
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
 		segment.color = 0; //WHITE
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
+#endif
 	}
 
 	/* Now find who has be voted the most */
@@ -615,6 +623,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	}
 
 	if(vote_box[highest_vote_i][highest_vote_j] < HISTOGRAM_FILTER_THRESHOLD) {
+		pose_available = false;
 		return false;
 	}
 
@@ -634,21 +643,15 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	int phi_sample_cnt = 0, d_sample_cnt = 0;
 
 	/* Calculate the mean of the vote (TODO:Weighted average?) */
-	for(size_t i = 0; i < phi_list.size(); i++) {
-		phi_i = phi_list.at(i);
+	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
+		float phi_i, d_i;
+		phi_i = inner_xeno_lines.at(i).phi;
+		d_i = inner_xeno_lines.at(i).d;
 
 		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
 			phi_mean += phi_i;
 			phi_sample_cnt++;
 		}
-	}
-
-	if(phi_sample_cnt == 0) return false;
-
-	phi_mean /= (float)phi_sample_cnt;
-
-	for(size_t i = 0; i < d_list.size(); i++) {
-		d_i = d_list.at(i);
 
 		if(d_i >= d_low_bound && d_i <= d_up_bound) {
 			d_mean += d_i;
@@ -656,18 +659,38 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		}
 	}
 
-	d_mean /= (float)d_sample_cnt;
+	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
+		float phi_i, d_i;
+		phi_i = outer_xeno_lines.at(i).phi;
+		d_i = outer_xeno_lines.at(i).d;
 
+		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
+			phi_mean += phi_i;
+			phi_sample_cnt++;
+		}
+
+		if(d_i >= d_low_bound && d_i <= d_up_bound) {
+			d_mean += d_i;
+			d_sample_cnt++;
+		}
+	}
+
+	if(phi_sample_cnt == 0) return false;
 	if(d_sample_cnt == 0) return false;
 
-	final_d = d_mean;
-	final_phi = phi_mean;
+	phi_mean /= (float)phi_sample_cnt;
+	d_mean /= (float)d_sample_cnt;
 
+	final_d = pose_d = d_mean;
+	final_phi = pose_phi = phi_mean;
+
+#if 1
 	//ROS message
 	segment.d = d_mean;
 	segment.phi = phi_mean;
 	segment.color = 2; //RED
 	segments_msg.segments.push_back(segment);
+#endif
 
 	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
 
