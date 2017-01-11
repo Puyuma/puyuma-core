@@ -17,13 +17,13 @@ void save_homography_matrix(cv::Mat& H)
 	cv::Mat _H;
 	H.copyTo(_H);
 
-	_H.convertTo(_H, CV_32F);
+	_H.convertTo(_H, CV_64F);
 
 	for(int i = 0; i < 3; i++) {
 		ROS_INFO("[%.5f %.5f %.5f]",
-			_H.at<float>(i, 0),
-			_H.at<float>(i, 1),
-			_H.at<float>(i, 2)
+			_H.at<double>(i, 0),
+			_H.at<double>(i, 1),
+			_H.at<double>(i, 2)
 		);
 	}
 }
@@ -56,7 +56,9 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 	int board_w = 7, board_h = 5;
 	cv::Size board_size(board_w, board_h);
 
-	bool found = findChessboardCorners(rectified_image, board_size, corners, CV_CALIB_CB_ADAPTIVE_THRESH);
+	bool found = findChessboardCorners(rectified_image, board_size, corners, 
+		CV_CALIB_CB_ADAPTIVE_THRESH + CV_CALIB_CB_FILTER_QUADS
+	);
 
 	/* Check the board if found or not */
 	if(found == true) {
@@ -176,6 +178,11 @@ int main(int argc, char* argv[])
 
 		cv::Mat distort_image;
 		cv::undistort(raw_image, distort_image, camera_matrix, distort_coffecient);
+
+		//Image sharpening
+		Mat temp_image;
+		cv::GaussianBlur(distort_image, temp_image, Size(0, 0) , 10);
+		cv::addWeighted(distort_image, 1.8, temp_image, -0.8, 0, distort_image) ;
 
 		if(get_H == false) {
 			if(estimate_homography(distort_image, H) == true) {
