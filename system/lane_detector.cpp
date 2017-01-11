@@ -143,6 +143,18 @@ bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 		}
 
 		H = new cv::Mat(3, 3, CV_64F, homography_array);
+
+		cv::Mat _H;
+		H->copyTo(_H);
+		_H.convertTo(_H, CV_64F);
+
+		for(int i = 0; i < 3; i++) {
+			ROS_INFO("[%.5f %.5f %.5f]",
+				_H.at<double>(i, 0),
+				_H.at<double>(i, 1),
+				_H.at<double>(i, 2)
+			);
+	        }
 	} catch(...) {
 		return false;
 	}
