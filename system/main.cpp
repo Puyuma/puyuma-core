@@ -180,10 +180,6 @@ void self_driving_thread_handler()
 		float d = 0, phi = 0;
 		bool get_pose = lane_detector->lane_estimate(distort_image, d, phi);
 
-		lane_detector->publish_images();
-
-		ros::spinOnce(); //ROS functions should hanlde in anouther realtime thread
-
 		/* Joystick mode */
 		if(mode == JOYSTICK_MODE) {
 			handle_joystick();
@@ -207,6 +203,15 @@ void self_driving_thread_handler()
 		std::this_thread::yield();
 	}
 
+}
+
+void ros_spin_thread_handler()
+{
+	while(1) {
+		ros::spinOnce();
+
+		std::this_thread::yield();
+	}
 }
 
 int main(int argc, char* argv[])
@@ -235,6 +240,7 @@ int main(int argc, char* argv[])
 	/* Threads */
 	thread self_driving_thread(self_driving_thread_handler);
 	thread camera_thread(camera_thread_handler);
+	thread ros_spin_thread(ros_spin_thread_handler);
 
 	pause();
 

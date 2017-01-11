@@ -1,4 +1,5 @@
 #include <fstream>
+#include <thread>
 
 #include <opencv2/opencv.hpp>
 #include <ros/ros.h>
@@ -17,6 +18,7 @@
 
 #define rad_to_deg(phi) (phi * 57.2957795)
 
+using namespace std;
 using namespace cv;
 
 void on_trackbar(int, void *)
@@ -42,17 +44,11 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
         	outer_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 10);
 
-		outter_hough_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/outer_hough_image", 10);
-
        		canny_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/canny_image", 10);
 
        		inner_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 10);
-
-		inner_hough_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/inner_hough_image", 10);
 
 	        marked_image_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 10);
@@ -65,7 +61,10 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	}
 }
 
-void LaneDetector::publish_images()
+void LaneDetector::publish_images(
+	cv::Mat& lane_mark_image, cv::Mat& canny_image,
+	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
+	cv::Mat& bird_view_image)
 {
 	sensor_msgs::ImagePtr img_msg;
 
@@ -82,14 +81,8 @@ void LaneDetector::publish_images()
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", outer_threshold_image).toImageMsg();
 	outer_threshold_img_publisher.publish(img_msg);
 
-	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", outer_hough_image).toImageMsg();
-	outter_hough_img_publisher.publish(img_msg);
-
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", inner_threshold_image).toImageMsg();
 	inner_threshold_img_publisher.publish(img_msg);
-
-	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC1", inner_hough_image).toImageMsg();
-	inner_hough_img_publisher.publish(img_msg);
 
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "8UC3", bird_view_image).toImageMsg();
 	bird_view_img_publisher.publish(img_msg);
@@ -238,29 +231,28 @@ void LaneDetector::save_thresholding_yaml()
 	}
 }
 
-void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Scalar line_color, Scalar dot_color, Scalar text_color)
+void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<segment_t>& lines,
+	Scalar line_color, Scalar dot_color, Scalar text_color)
 {
-	char text[50] = {'\0'};
-
 	for(size_t i = 0; i < lines.size(); i++) {
-		Vec4f line = lines[i];
-		
-#if 1
 		cv::line(lane_mark_image,
-			Point(line[0] + roi_offset_x, line[1] + roi_offset_y),
-			Point(line[2] + roi_offset_x, line[3] + roi_offset_y),
+			Point(lines.at(i).untransformed.x1 + roi_offset_x,
+				lines.at(i).untransformed.y1 + roi_offset_y),
+			Point(lines.at(i).untransformed.x2 + roi_offset_x,
+				lines.at(i).untransformed.y2 + roi_offset_y),
 			line_color, 3, CV_AA
 		);
 
 		cv::circle(lane_mark_image,
-			Point(line[0] + roi_offset_x, line[1] + roi_offset_y),
+			Point(lines.at(i).untransformed.x1 + roi_offset_x,
+				lines.at(i).untransformed.y1 + roi_offset_y),
 			3, dot_color, 2, CV_AA, 0
 		);
 		cv::circle(lane_mark_image,
-			Point(line[2] + roi_offset_x, line[3] + roi_offset_y),
+			Point(lines.at(i).untransformed.x2 + roi_offset_x,
+				lines.at(i).untransformed.y2 + roi_offset_y),
 			3, dot_color, 2, CV_AA, 0
 		);
-#endif
 	}  
 }
 
@@ -295,10 +287,10 @@ bool LaneDetector::single_edge_recognize(cv::Mat& threshold_image, segment_t& la
 	 */
 
         Point2f p1, p2;
-        p1.x = lane_segment.x1;
-        p1.y = lane_segment.y1;
-        p2.x = lane_segment.x2;
-        p2.y = lane_segment.y2;
+        p1.x = lane_segment.untransformed.x1;
+        p1.y = lane_segment.untransformed.y1;
+        p2.x = lane_segment.untransformed.x2;
+        p2.y = lane_segment.untransformed.y2;
 
 	/* Swap if p1 is higher */
 	if(p1.y < p2.y) {
@@ -368,10 +360,10 @@ void LaneDetector::segments_side_recognize(vector<Vec4f>& cv_segments,
 	for(size_t i = 0; i < cv_segments.size(); i++) {
 		segment_t new_xeno_segment;
 
-		new_xeno_segment.x1 = cv_segments[i][0];
-		new_xeno_segment.y1 = cv_segments[i][1];
-		new_xeno_segment.x2 = cv_segments[i][2];
-		new_xeno_segment.y2 = cv_segments[i][3];
+		new_xeno_segment.untransformed.x1 = cv_segments[i][0];
+		new_xeno_segment.untransformed.y1 = cv_segments[i][1];
+		new_xeno_segment.untransformed.x2 = cv_segments[i][2];
+		new_xeno_segment.untransformed.y2 = cv_segments[i][3];
 
 		single_edge_recognize(threshold_image, new_xeno_segment);
 
@@ -382,14 +374,12 @@ void LaneDetector::segments_side_recognize(vector<Vec4f>& cv_segments,
 void LaneDetector::draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& lane_segments)
 {
 	Point2f midpoint;
-	float x;
-	float y;
 
 	for(size_t i = 0; i < lane_segments.size(); i++) {
-		x = (lane_segments[i].x1 + lane_segments[i].x2) / 2 + roi_offset_x;
-		y = (lane_segments[i].y1 + lane_segments[i].y2) / 2 + roi_offset_y;
-		midpoint.x = x;
-		midpoint.y = y;
+		midpoint.x = (lane_segments.at(i).untransformed.x1 +
+			lane_segments.at(i).untransformed.x2) / 2 + roi_offset_x;
+		midpoint.y = (lane_segments.at(i).untransformed.y1 +
+			lane_segments[i].untransformed.y2) / 2 + roi_offset_y;
 
 		if(lane_segments.at(i).side == LEFT_EDGE) {
 			putText(lane_mark_image, "l", midpoint, FONT_HERSHEY_COMPLEX_SMALL,
@@ -433,22 +423,66 @@ void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
 		vector<Point2f> segment_transformed;
 
 		Point2f point;
-		point.x = lines[i].x1 + roi_offset_x;
-		point.y = lines[i].y1 + roi_offset_y;
+		point.x = lines.at(i).untransformed.x1 + roi_offset_x;
+		point.y = lines.at(i).untransformed.y1 + roi_offset_y;
 		segment.push_back(point);
-		point.x = lines[i].x2 + roi_offset_x;
-		point.y = lines[i].y2 + roi_offset_y;
+		point.x = lines.at(i).untransformed.x2 + roi_offset_x;
+		point.y = lines.at(i).untransformed.y2 + roi_offset_y;
 		segment.push_back(point);
 
 		perspectiveTransform(segment, segment_transformed, *H);
 
-		lines[i].x1 = segment_transformed.at(0).x;
-		lines[i].y1 = segment_transformed.at(0).y;
-		lines[i].x2 = segment_transformed.at(1).x;
-		lines[i].y2 = segment_transformed.at(1).y;
+		lines.at(i).x1 = segment_transformed.at(0).x;
+		lines.at(i).y1 = segment_transformed.at(0).y;
+		lines.at(i).x2 = segment_transformed.at(1).x;
+		lines.at(i).y2 = segment_transformed.at(1).y;
 
 		//ROS_INFO("p1(%f,%f) p2(%f,%f)", lines[i][0], lines[i][1], lines[i][2], lines[i][3]);
 	}
+}
+
+void LaneDetector::send_visualize_image_to_queue(
+	/* Images */
+	cv::Mat distorted_image, cv::Mat canny_image,
+	cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
+	/* Segments */
+	vector<segment_t> outer_lines, vector<segment_t> inner_lines,
+	/* Pose */
+	float d, float phi, xenobot::segmentArray segments_msg)
+{
+	cv::Mat lane_mark_image = distorted_image;
+
+#if 1
+	/* Bird view image */
+	cv::Mat bird_view_image;
+	draw_bird_view_image(distorted_image, bird_view_image);
+#endif
+
+	/* Lane mark image */
+	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
+	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
+	draw_segment_side(lane_mark_image, outer_lines);
+	draw_segment_side(lane_mark_image, inner_lines);
+	draw_region_of_interest(lane_mark_image);
+
+	/* Draw car status */
+	putText(lane_mark_image, "Self-driving mode on", Point(10, 15),
+		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
+
+	char status_text[60];
+	sprintf(status_text, "d=%.1fcm,phi=%.1fdegree", d, phi);
+	putText(lane_mark_image, status_text, Point(10, 40),
+		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
+
+	publish_images(
+		lane_mark_image, canny_image,
+		outer_threshold_image, inner_threshold_image,
+		bird_view_image
+	);
+
+	histogram_publisher.publish(segments_msg);
+
+	ROS_INFO("phi:%f | d:%f", phi, d);
 }
 
 bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi)
@@ -510,22 +544,9 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		return false;
 	}
 
-#ifndef __DEBUG_PLOT__
-	raw_image.copyTo(lane_mark_image);
-	mark_lane(lane_mark_image, outer_cv_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
-	mark_lane(lane_mark_image, inner_cv_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
-	draw_segment_side(lane_mark_image, outer_xeno_lines);
-	draw_segment_side(lane_mark_image, inner_xeno_lines);
-	draw_region_of_interest(lane_mark_image);
-#endif
-
+	/*Perspective transformation */
 	segment_homography_transform(outer_xeno_lines);
 	segment_homography_transform(inner_xeno_lines);
-
-#ifndef __DEBUG_PLOT__
-	//Bird view image
-	draw_bird_view_image(raw_image, bird_view_image);
-#endif
 
 	/* Histogram filtering */
 
@@ -692,32 +713,18 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	segments_msg.segments.push_back(segment);
 #endif
 
-	ROS_INFO("Histogram filter phi:%f | d:%f", phi_mean, d_mean);
+	thread send_image_thread(
+		&LaneDetector::send_visualize_image_to_queue,
+		this,
+		raw_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		outer_xeno_lines, inner_xeno_lines,
+		final_d, final_phi, segments_msg
+	);
 
-	histogram_publisher.publish(segments_msg);
-
-	/* Car status, need to be fixed */
-#if 0
-	if(mid_lines.size() == 0) {
-		putText(lane_mark_image, "Error: Cannot detect any segment", Point(15, 15),
-                FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 0, 255));
-
-		//return false;
-	} else {
-		putText(lane_mark_image, "Self-driving mode on", Point(15, 15),
-                FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
-	}
-#else
-	/* Debug plot */
-	putText(lane_mark_image, "Self-driving mode on", Point(10, 15),
-		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
-
-	/* 65 for two filter parallel display  */
-	char debug_text[60];
-	sprintf(debug_text, "d=%.1fcm,phi=%.1fdegree", d_mean, phi_mean);
-	putText(lane_mark_image, debug_text, Point(10, 40),
-		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
-#endif
+	send_image_thread.detach();
 
 	return true;
 }

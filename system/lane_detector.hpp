@@ -6,6 +6,11 @@
 #include <yaml-cpp/yaml.h>
 #include <cv_bridge/cv_bridge.h>
 
+#include <xenobot/segment.h>
+#include <xenobot/segmentArray.h>
+
+using namespace std;
+
 #define IMAGE_WIDTH 320.0 //pixel
 #define IMAGE_HEIGHT 240.0
 
@@ -49,6 +54,14 @@ enum {LEFT_EDGE, RIGHT_EDGE, UNKNOWN_SIDE};
 typedef struct {
 	int side; //Left or right?
 
+	struct {
+		float x1;
+		float y1;
+
+		float x2;
+		float y2;	
+	} untransformed;
+
 	float x1;
 	float y1;
 
@@ -71,8 +84,8 @@ class LaneDetector {
 	int inner_threshold_s_min, inner_threshold_s_max;
 	int inner_threshold_v_min, inner_threshold_v_max;
 
-	cv::Mat outer_hsv_image, outer_threshold_image, outer_hough_image;
-	cv::Mat inner_hsv_image, inner_threshold_image, inner_hough_image;
+	cv::Mat outer_hsv_image, outer_threshold_image;
+	cv::Mat inner_hsv_image, inner_threshold_image;
 	cv::Mat lane_mark_image, bird_view_image;
 	cv::Mat canny_image;
 
@@ -97,27 +110,37 @@ class LaneDetector {
 
 	bool read_threshold_setting(string yaml_path);
 	bool read_extrinsic_calibration(string yaml_path);
-	void mark_lane(cv::Mat& lane_mark_image, vector<Vec4f>& lines, Scalar line_color, Scalar dot_color, Scalar text_color);
 	Point3f point_transform_image_to_ground(int pixel_x, int pixel_y);
 	void append_yaml_data(YAML::Emitter& yaml_handler, string key, int value);
-	void line_fitting(vector<Vec4f>& lines, Vec4f& best_fitted_line);
 	void image_to_gnd(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	void gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, float& gnd_y);
 	bool single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment);
-	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
-	void draw_bird_view_image(cv::Mat& original_image, cv::Mat& bird_view_image);
 	void find_region_of_interest(cv::Mat& original_image, cv::Mat& roi_image);
-	void draw_region_of_interest(cv::Mat lane_mark_image);
 	void segment_homography_transform(vector<segment_t>& lines);
 	void segments_side_recognize(vector<Vec4f>& cv_segments,
 		vector<segment_t>& xeno_segments, cv::Mat& threshold_image);
 	bool generate_vote(segment_t& lane_segment, float& d, float& phi, int color);
 
+	/* Visualization */
+	void mark_lane(cv::Mat& lane_mark_image, vector<segment_t>& lines,
+		Scalar line_color, Scalar dot_color, Scalar text_color);
+	void publish_images(
+		cv::Mat& lane_mark_image, cv::Mat& canny_image,
+		cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
+		cv::Mat& bird_view_image);
+	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
+	void draw_bird_view_image(cv::Mat& original_image, cv::Mat& bird_view_image);
+	void draw_region_of_interest(cv::Mat lane_mark_image);
+	void send_visualize_image_to_queue(
+		cv::Mat distorted_image, cv::Mat canny_image,
+		cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
+		vector<segment_t> outer_lines, vector<segment_t> inner_lines,
+		float d, float phi, xenobot::segmentArray segments_msg);
+
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);
 
 	bool lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi);
-	void publish_images();
 	void set_hsv(
 	       double outer_h_max, double outer_h_min, double outer_s_max,
 	       double outer_s_min, double outer_v_max, double outer_v_min,
