@@ -37,6 +37,8 @@ ros::Publisher distort_image_publisher;
 ros::Subscriber threshold_setting_subscriber;
 ros::Subscriber wheel_command_subscriber;
 
+/* Camera */
+raspicam::RaspiCam_Cv camera;
 Queue<cv::Mat> raw_image_queue;
 
 void handle_joystick()
@@ -135,13 +137,6 @@ void load_yaml_parameter()
 
 void camera_thread_handler()
 {
-	raspicam::RaspiCam_Cv camera;
-
-	if(!camera_setup(camera)) {
-		ROS_INFO("Abort: failed to open pi camera!");
-		return;
-	}
-
 	cv::Mat frame;
 
 	while(1) {
@@ -236,6 +231,12 @@ int main(int argc, char* argv[])
 
 	/* Motor initialization */
 	motor_init();
+
+	/* Camera initialization */
+	if(!camera_setup(camera)) {
+		ROS_INFO("Abort: failed to open pi camera!");
+		return 0;
+	}
 
 	/* Threads */
 	thread self_driving_thread(self_driving_thread_handler);
