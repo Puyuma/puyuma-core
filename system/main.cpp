@@ -160,7 +160,7 @@ void self_driving_thread_handler()
 
 		cv::undistort(frame, distort_image, camera_matrix, distort_coffecient);
 
-#ifndef __PUBLISH_IMAGE__
+#if 0
 		sensor_msgs::ImagePtr raw_img_msg =
 			cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
 
@@ -191,8 +191,6 @@ void self_driving_thread_handler()
 			self_driving_controller(d, phi);
 		} else {
 			halt_motor();
-
-			ROS_INFO("Can't estimate the lane pose, too many noise!");
 		}
 
 		std::this_thread::yield();
@@ -219,11 +217,11 @@ int main(int argc, char* argv[])
 	ros::NodeHandle node;
 
 	raw_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 1000);
+		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 10);
 	distort_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 1000);
+		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 10);
 	threshold_setting_subscriber =
-		node.subscribe("/xenobot/calibration/threshold_setting", 1000, threshold_setting_callback);
+		node.subscribe("/xenobot/calibration/threshold_setting", 10, threshold_setting_callback);
 	wheel_command_subscriber =
 		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
 
