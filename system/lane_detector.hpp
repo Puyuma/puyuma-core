@@ -40,8 +40,8 @@ using namespace std;
 
 /* Lane detector parameter */
 #define CANNY_THRESHOLD_1 50
-#define CANNY_THRESHOLD_2 200
-#define HOUGH_THRESHOLD 100
+#define CANNY_THRESHOLD_2 300
+#define HOUGH_THRESHOLD 50
 #define SIDE_DETECT_PIXEL_CNT 20
 #define SIDE_DETECT_THREDHOLD 14
 
