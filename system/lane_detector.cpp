@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <yaml-cpp/yaml.h>
 
+#include <std_msgs/Float32.h>
 #include <xenobot/segment.h>
 #include <xenobot/segmentArray.h>
 
@@ -58,7 +59,13 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 			node.advertise<sensor_msgs::Image>("xenobot/bird_view_image", 10);
 
 		histogram_publisher =
-			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 10);;
+			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 10);
+
+		pose_d_publisher =
+			node.advertise<std_msgs::Float32>("/xenobot/pose/d", 10);
+
+		pose_phi_publisher =
+			node.advertise<std_msgs::Float32>("/xenobot/pose/phi", 10);
 	}
 }
 
@@ -482,6 +489,12 @@ void LaneDetector::send_sucess_visualize_image_thread(
 	);
 
 	histogram_publisher.publish(segments_msg);
+
+	std_msgs::Float32 pose_msg;
+	pose_msg.data = d;
+	pose_d_publisher.publish(pose_msg);
+	pose_msg.data = phi;
+	pose_phi_publisher.publish(pose_msg);
 
 	ROS_INFO("phi:%f | d:%f", phi, d);
 }
