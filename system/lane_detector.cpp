@@ -17,6 +17,7 @@
 #define DRAW_DEBUG_INFO 1
 
 #define rad_to_deg(phi) (phi * 57.2957795)
+#define PI 3.141592
 
 using namespace std;
 using namespace cv;
@@ -856,7 +857,7 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 	normalize(t_hat);
 
 	/* Estimate phi */
-	phi = rad_to_deg(atan2f(t_hat.y, t_hat.x)) + 90.0f;
+	phi = atan2f(t_hat.y, t_hat.x) + PI / 2;
 
 	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
 
@@ -879,6 +880,11 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 	p1 += offset_vector;
 	p2 += offset_vector;
 
+	p1.x -= CAMERA_TO_CENTER * sin(phi);
+	p1.y -= CAMERA_TO_CENTER * cos(phi);
+	p2.x -= CAMERA_TO_CENTER * sin(phi);
+	p2.y -= CAMERA_TO_CENTER * cos(phi);
+
 	float d1 = inner_product(n_hat, p1);
 	float d2 = inner_product(n_hat, p2);
 
@@ -886,6 +892,8 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 
 	//TODO:referive the geometry formulas!
 	d *= -1;
+
+	phi = rad_to_deg(phi);
 
 	return true;
 }
