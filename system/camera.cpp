@@ -67,7 +67,7 @@ bool camera_setup(raspicam::RaspiCam_Cv& camera)
 	camera.set(CV_CAP_PROP_SATURATION, 100);
 	camera.set(CV_CAP_PROP_GAIN, 1);
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_EXPOSURE, 15);
+	camera.set(CV_CAP_PROP_EXPOSURE, 25);
 	camera.set(CV_CAP_PROP_WHITE_BALANCE_RED_V, 0);
 	camera.set(CV_CAP_PROP_WHITE_BALANCE_BLUE_U, 0);
 
