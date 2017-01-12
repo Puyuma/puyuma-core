@@ -860,24 +860,29 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 
 	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
 
+	Point2f offset_vector = n_hat;
+
+	if(color == WHITE) {
+		if(lane_segment.side == RIGHT_EDGE) {
+			offset_vector *= -(W / 2) - L_W;
+		} else {
+			offset_vector *= -(W / 2);
+		}
+	} else if(color == YELLOW) {
+		if(lane_segment.side == LEFT_EDGE) {
+			offset_vector *= +(W / 2) + L_Y;
+		} else {
+			offset_vector *= +(W / 2);
+		}
+	}
+
+	p1 += offset_vector;
+	p2 += offset_vector;
+
 	float d1 = inner_product(n_hat, p1);
 	float d2 = inner_product(n_hat, p2);
 
 	d = (d1 + d2) / 2; //lateral displacement
-
-	if(color == WHITE) {
-		d -= W / 2;
-
-		if(lane_segment.side == RIGHT_EDGE) {
-			d -= L_W;
-		}
-	} else if(color == YELLOW) {
-		d += W / 2;
-
-		if(lane_segment.side == LEFT_EDGE) {
-			d += L_Y;
-		}
-	}
 
 	//TODO:referive the geometry formulas!
 	d *= -1;
