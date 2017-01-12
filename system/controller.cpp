@@ -4,6 +4,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "controller.hpp"
+#include "lane_detector.hpp"
 #include "motor.hpp"
 
 using namespace std;
@@ -49,6 +50,15 @@ bool load_pid_param(string _yaml_path)
 }
 
 void bound(int min, int max, int& x)
+{
+	if(x < min) {
+		x = min;
+	} else if(x > max) {
+		x = max;
+	}
+}
+
+void bound(float min, float max, float& x)
 {
 	if(x < min) {
 		x = min;
@@ -128,8 +138,11 @@ void self_driving_controller(float d, float phi)
 {
 	int pwm_left, pwm_right;
 
-	int pwm = (int)pid_d_control(d, 0, pid_d) +
-		  (int)pid_phi_control(phi, 0,  pid_phi);
+	float phi_setpoint = pid_d_control(d, 0, pid_d);
+
+	bound(PHI_MIN, PHI_MAX, phi_setpoint);
+
+	int pwm = (int)pid_phi_control(phi, phi_setpoint, pid_phi);
 
 	pwm_left = THROTTLE_BASE + pwm;
 	pwm_right = THROTTLE_BASE - pwm;
