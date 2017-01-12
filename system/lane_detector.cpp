@@ -510,8 +510,6 @@ void LaneDetector::send_failed_visualize_image_thread(
 		outer_threshold_image, inner_threshold_image,
 		bird_view_image
 	);
-
-	ROS_INFO("Failed to estimate the lane");
 }
 
 
@@ -617,7 +615,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
-		ROS_INFO("[No segment found]");
+		ROS_INFO("Failed to estimate the lane [No segment found]");
 
 		return false;
 	}
@@ -729,7 +727,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
-		ROS_INFO("[Less than threshold value]");
+		ROS_INFO("Failed to estimate the lane [Less than threshold value]");
 
 		return false;
 	}
@@ -790,7 +788,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
-		ROS_INFO("Sample count equals zero");
+		ROS_INFO("Failed to estimate the lane [Sample count equals zero]");
 
 		return false;
 	}
