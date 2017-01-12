@@ -616,6 +616,8 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
+		ROS_INFO("[No segment found]");
+
 		return false;
 	}
 
@@ -726,6 +728,8 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
+		ROS_INFO("[Less than threshold value]");
+
 		return false;
 	}
 
@@ -784,6 +788,8 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			outer_threshold_image,
 			inner_threshold_image
 		);
+
+		ROS_INFO("Sample count equals zero");
 
 		return false;
 	}
