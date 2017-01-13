@@ -62,6 +62,18 @@ roslaunch xenobot activate_controller.launch veh:=machine_name calibrate:=true
 roslaunch xenobot activate_controller.launch veh:=machine_name
 ```
 
+###4. Setup .bashrc
+
+Add:
+
+```
+. /opt/ros/kinetic/setup.bash
+. ~/catkin_ws/devel/setup.bash
+export ROS_IP=`hostname -I`
+alias play="roslaunch xenobot activate_controller.launch veh:=colin calibrate:=1"
+alias stop=". ~/catkin_ws/src/xenobot/halt_motor.sh"
+```
+
 ##Analysing
 
 ###Scatter plot
