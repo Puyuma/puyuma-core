@@ -1,6 +1,8 @@
 #Xenobot
 
-A lightweight replica of MIT duckietown project.
+Inspired by MIT, this is a lightweight replica of MIT duckietown project.
+
+Our goal is to build a low cost self-driving car based on realtime Linux (patched by Xenomai)
 
 #Demo videos
 
