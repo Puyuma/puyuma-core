@@ -2,6 +2,10 @@
 
 A lightweight replica of MIT duckietown project.
 
+#Demo videos
+
+[![lane_following](https://github.com/ncku-ros2-research/xenobot/blob/master/materials/demo_video1.jpeg?raw=true)](https://www.youtube.com/watch?v=84MXc0_F61o)
+
 ##Installation
 
 Connecting to your raspberry pi using ssh then follow the instructions.
