@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <yaml-cpp/yaml.h>
 
+#include <std_msgs/Float32.h>
 #include <xenobot/segment.h>
 #include <xenobot/segmentArray.h>
 
@@ -17,6 +18,7 @@
 #define DRAW_DEBUG_INFO 1
 
 #define rad_to_deg(phi) (phi * 57.2957795)
+#define PI 3.141592
 
 using namespace std;
 using namespace cv;
@@ -57,7 +59,13 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 			node.advertise<sensor_msgs::Image>("xenobot/bird_view_image", 10);
 
 		histogram_publisher =
-			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 10);;
+			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 10);
+
+		pose_d_publisher =
+			node.advertise<std_msgs::Float32>("/xenobot/pose/d", 10);
+
+		pose_phi_publisher =
+			node.advertise<std_msgs::Float32>("/xenobot/pose/phi", 10);
 	}
 }
 
@@ -482,6 +490,12 @@ void LaneDetector::send_sucess_visualize_image_thread(
 
 	histogram_publisher.publish(segments_msg);
 
+	std_msgs::Float32 pose_msg;
+	pose_msg.data = d;
+	pose_d_publisher.publish(pose_msg);
+	pose_msg.data = phi;
+	pose_phi_publisher.publish(pose_msg);
+
 	ROS_INFO("phi:%f | d:%f", phi, d);
 }
 
@@ -509,8 +523,6 @@ void LaneDetector::send_failed_visualize_image_thread(
 		outer_threshold_image, inner_threshold_image,
 		bird_view_image
 	);
-
-	ROS_INFO("Failed to estimate the lane");
 }
 
 
@@ -616,7 +628,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
-		ROS_INFO("[No segment found]");
+		ROS_INFO("Failed to estimate the lane [No segment found]");
 
 		return false;
 	}
@@ -728,7 +740,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
-		ROS_INFO("[Less than threshold value]");
+		ROS_INFO("Failed to estimate the lane [Less than threshold value]");
 
 		return false;
 	}
@@ -789,7 +801,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 			inner_threshold_image
 		);
 
-		ROS_INFO("Sample count equals zero");
+		ROS_INFO("Failed to estimate the lane [Sample count equals zero]");
 
 		return false;
 	}
@@ -856,31 +868,45 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 	normalize(t_hat);
 
 	/* Estimate phi */
-	phi = rad_to_deg(atan2f(t_hat.y, t_hat.x)) + 90.0f;
+	phi = atan2f(t_hat.y, t_hat.x) + PI / 2;
 
 	Point2f n_hat(-t_hat.y, t_hat.x); //normal vector
+
+	Point2f offset_vector = n_hat;
+
+	float steady_bias = 4; //cm
+
+	if(color == WHITE) {
+		if(lane_segment.side == RIGHT_EDGE) {
+			offset_vector *= -(W / 2) - L_W;
+		} else {
+			offset_vector *= -(W / 2);
+		}
+	} else if(color == YELLOW) {
+		if(lane_segment.side == LEFT_EDGE) {
+			offset_vector *= +(W / 2) + L_Y + steady_bias;
+		} else {
+			offset_vector *= +(W / 2) + steady_bias;
+		}
+	}
+
+	p1 += offset_vector;
+	p2 += offset_vector;
+
+	p1.x -= CAMERA_TO_CENTER * sin(phi);
+	p1.y -= CAMERA_TO_CENTER * cos(phi);
+	p2.x -= CAMERA_TO_CENTER * sin(phi);
+	p2.y -= CAMERA_TO_CENTER * cos(phi);
 
 	float d1 = inner_product(n_hat, p1);
 	float d2 = inner_product(n_hat, p2);
 
 	d = (d1 + d2) / 2; //lateral displacement
 
-	if(color == WHITE) {
-		d -= W / 2;
-
-		if(lane_segment.side == RIGHT_EDGE) {
-			d -= L_W;
-		}
-	} else if(color == YELLOW) {
-		d += W / 2;
-
-		if(lane_segment.side == LEFT_EDGE) {
-			d += L_Y;
-		}
-	}
-
 	//TODO:referive the geometry formulas!
 	d *= -1;
+
+	phi = rad_to_deg(phi);
 
 	return true;
 }
