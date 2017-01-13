@@ -67,10 +67,10 @@ void bound(float min, float max, float& x)
 	}
 }
 
-static float pid_d_control(int d_current, float d_setpoint, pid_control_t& pid)
+static float pid_control(int current_value, float setpoint, pid_control_t& pid)
 {
-	float p_term, d_term;
-	float current_error = d_current - d_setpoint;
+	float p_term, d_term, i_term;
+	float current_error = current_value - setpoint;
 
 	ros::Time current_time = ros::Time::now();
 
@@ -80,52 +80,25 @@ static float pid_d_control(int d_current, float d_setpoint, pid_control_t& pid)
 	if(pid.been_init == false) {
 		pid.been_init = true;
 		d_term = 0; //No D term
+		i_term = 0; //No I term
 	} else if(pid.been_halted == true) {
 		pid.been_halted = false;
 		d_term = 0; //No D term
+		i_term = 0; //No I term
 	} else {
 		//Calculate the time interval
 		float delta_t = current_time.toSec() - pid.previous_time.toSec();
 
-		//Calculate the D term
+		//Calculate I and D terms
 		d_term = pid.kd * (current_error - pid.previous_error) / delta_t;
+		i_term = pid.ki * current_error * delta_t;
 	}
 
 	pid.previous_error = current_error;
 	pid.previous_time = current_time;
+	pid.previous_i_term = i_term;
 
-	return p_term + d_term;
-}
-
-static float pid_phi_control(float phi_current, float phi_setpoint, pid_control_t& pid)
-{
-	float p_term, d_term;
-	float current_error = phi_current - phi_setpoint;
-
-	ros::Time current_time = ros::Time::now();
-
-	//Calculate the P term
-	p_term = pid.kp * current_error;
-
-	if(pid.been_init == false) {
-		pid.been_init = true;
-		d_term = 0; //No D term
-	} else if(pid.been_halted == true) {
-		pid.been_halted = false;
-		d_term = 0; //No D term
-	} else {
-		//Calculate the time interval
-		float delta_t = current_time.toSec() - pid.previous_time.toSec();
-
-		//Calculate the D term
-		d_term = pid.kd * (current_error - pid.previous_error) / delta_t;
-	}
-
-	pid.previous_error = current_error;
-	pid.previous_time = current_time;
-
-	return p_term + d_term;
-
+	return p_term + d_term + i_term;
 }
 
 void pid_halt()
@@ -138,11 +111,11 @@ void self_driving_controller(float d, float phi)
 {
 	int pwm_left, pwm_right;
 
-	float phi_setpoint = pid_d_control(d, 0, pid_d);
+	float phi_setpoint = pid_control(d, 0, pid_d);
 
 	bound(PHI_MIN, PHI_MAX, phi_setpoint);
 
-	int pwm = (int)pid_phi_control(phi, phi_setpoint, pid_phi);
+	int pwm = (int)pid_control(phi, phi_setpoint, pid_phi);
 
 	pwm_left = THROTTLE_BASE + pwm;
 	pwm_right = THROTTLE_BASE - pwm;
