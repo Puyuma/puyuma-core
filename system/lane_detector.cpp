@@ -874,6 +874,8 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 
 	Point2f offset_vector = n_hat;
 
+	float steady_bias = 4; //cm
+
 	if(color == WHITE) {
 		if(lane_segment.side == RIGHT_EDGE) {
 			offset_vector *= -(W / 2) - L_W;
@@ -882,9 +884,9 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 		}
 	} else if(color == YELLOW) {
 		if(lane_segment.side == LEFT_EDGE) {
-			offset_vector *= +(W / 2) + L_Y;
+			offset_vector *= +(W / 2) + L_Y + steady_bias;
 		} else {
-			offset_vector *= +(W / 2);
+			offset_vector *= +(W / 2) + steady_bias;
 		}
 	}
 
