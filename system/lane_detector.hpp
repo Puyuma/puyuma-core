@@ -27,6 +27,9 @@ using namespace std;
 #define L_Y 2.5
 #define W 16.5
 
+/* Car parameter */
+#define CAMERA_TO_CENTER 10.0 //cm
+
 /* Historgram filter parameters */
 #define DELTA_PHI 2.0 //degree
 #define DELTA_D 2.0 //cm
@@ -40,7 +43,7 @@ using namespace std;
 
 /* Lane detector parameter */
 #define CANNY_THRESHOLD_1 50
-#define CANNY_THRESHOLD_2 300
+#define CANNY_THRESHOLD_2 200
 #define HOUGH_THRESHOLD 50
 #define SIDE_DETECT_PIXEL_CNT 20
 #define SIDE_DETECT_THREDHOLD 14
@@ -103,6 +106,8 @@ class LaneDetector {
 	ros::Publisher marked_image_publisher;
 	ros::Publisher bird_view_img_publisher;
 	ros::Publisher histogram_publisher;
+	ros::Publisher pose_d_publisher;
+	ros::Publisher pose_phi_publisher;
 
 	bool read_threshold_setting(string yaml_path);
 	bool read_extrinsic_calibration(string yaml_path);

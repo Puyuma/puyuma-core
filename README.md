@@ -1,6 +1,14 @@
 #Xenobot
 
-A lightweight replica of MIT duckietown project.
+Inspired by MIT, this is a lightweight replica of MIT duckietown project.
+
+Our goal is to build a low cost self-driving car based on realtime Linux (patched by Xenomai)
+
+#Demo videos
+
+[![lane_following](https://github.com/ncku-ros2-research/xenobot/blob/master/materials/demo_video1.jpeg?raw=true)](https://www.youtube.com/watch?v=84MXc0_F61o)
+
+[![rviz](https://github.com/ncku-ros2-research/xenobot/blob/master/materials/demo_video2.jpeg?raw=true)](https://www.youtube.com/watch?v=XK602hzbORY&feature=youtu.be)
 
 ##Installation
 
@@ -60,6 +68,18 @@ roslaunch xenobot activate_controller.launch veh:=machine_name calibrate:=true
 
 ```
 roslaunch xenobot activate_controller.launch veh:=machine_name
+```
+
+###4. Setup .bashrc
+
+Add:
+
+```
+. /opt/ros/kinetic/setup.bash
+. ~/catkin_ws/devel/setup.bash
+export ROS_IP=`hostname -I`
+alias play="roslaunch xenobot activate_controller.launch veh:=colin calibrate:=1"
+alias stop=". ~/catkin_ws/src/xenobot/halt_motor.sh"
 ```
 
 ##Analysing

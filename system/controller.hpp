@@ -22,6 +22,7 @@ typedef struct {
 	bool been_init;
 
 	float previous_error;
+	float previous_i_term;
 
 	ros::Time previous_time; //XXX:This is not realtime!
 } pid_control_t;
