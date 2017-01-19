@@ -170,21 +170,25 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 	try {
 		ROS_INFO("%s", _yaml_path.c_str());
 
-		YAML::Node yaml = YAML::LoadFile(_yaml_path);
+		YAML::Node yaml_node = YAML::LoadFile(_yaml_path);
 
-		outer_h_min = yaml["outer_h_min"].as<int>();
-		outer_h_max = yaml["outer_h_max"].as<int>();
-		outer_s_min = yaml["outer_s_min"].as<int>();
-		outer_s_max = yaml["outer_s_max"].as<int>();
-		outer_v_min = yaml["outer_v_min"].as<int>();
-		outer_v_max = yaml["outer_v_max"].as<int>();
+		YAML::Node outter_node = yaml_node["outter"];
 
-		inner_h_min = yaml["inner_h_min"].as<int>();
-		inner_h_max = yaml["inner_h_max"].as<int>();
-		inner_s_min = yaml["inner_s_min"].as<int>();
-		inner_s_max = yaml["inner_s_max"].as<int>();
-		inner_v_min = yaml["inner_v_min"].as<int>();
-		inner_v_max = yaml["inner_v_max"].as<int>();
+		outer_h_min = outer_node["h_min"].as<int>();
+		outer_h_max = outer_node["h_max"].as<int>();
+		outer_s_min = outer_node["s_min"].as<int>();
+		outer_s_max = outer_node["s_max"].as<int>();
+		outer_v_min = outer_node["v_min"].as<int>();
+		outer_v_max = outer_node["v_max"].as<int>();
+		
+		YAML::Node inner_node = yaml_node["inner"];
+
+		inner_h_min = inner_node["h_min"].as<int>();
+		inner_h_max = inner_node["h_max"].as<int>();
+		inner_s_min = inner_node["s_min"].as<int>();
+		inner_s_max = inner_node["s_max"].as<int>();
+		inner_v_min = inner_node["v_min"].as<int>();
+		inner_v_max = inner_node["v_max"].as<int>();
 	} catch(...) {
 		return false;
 	}
