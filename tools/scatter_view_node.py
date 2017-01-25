@@ -56,7 +56,6 @@ def data_cb(msg):
 		phi_i = []
 		d.append(d_i)
 		phi.append(phi_i)
-		print i
 
 	for seg in msg.segments:
 		if(seg.color < n):
@@ -86,7 +85,7 @@ def main():
 	plotWidget = pg.plot(title="Scatter plot",labels={'left': ("phi"), 'bottom': ("d")} )
 
 	dRange=(-25,25)
-	phiRange=(0,180)
+	phiRange=(-90,90)
 
 	view = plotWidget.getViewBox()
 	view.setRange(xRange=dRange, yRange=phiRange)
