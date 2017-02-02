@@ -1,11 +1,11 @@
 <launch>
-    <param name="config_path" value="/home/ubuntu/catkin_ws/src/xenobot/config/" />
+    <param name="config_path" value="$(find xenobot)/config/" />
 
     <param name="machine_name" value="$(arg veh)" />
 
     <param name="calibrate" value="false" />
 
-    <arg name="local" default="false"/>
+    <arg name="local" default="true"/>
 
     <group if="$(arg local)">
         <node name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller" output="screen"/>
