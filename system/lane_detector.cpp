@@ -172,7 +172,7 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 
 		YAML::Node yaml_node = YAML::LoadFile(_yaml_path);
 
-		YAML::Node outter_node = yaml_node["outter"];
+		YAML::Node outer_node = yaml_node["outer"];
 
 		outer_h_min = outer_node["h_min"].as<int>();
 		outer_h_max = outer_node["h_max"].as<int>();
