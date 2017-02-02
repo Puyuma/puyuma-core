@@ -6,6 +6,7 @@
 #include "ros/ros.h"
 #include <ros/console.h>
 #include <yaml-cpp/yaml.h>
+#include <std_srvs/Trigger.h>
 
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
@@ -20,6 +21,7 @@ int save = 0;
 std::string yaml_path;
 std::string machine_name;
 ros::Publisher threshold_setting_pub;
+ros::ServiceClient save_file_srv;
 
 cv::Mat outer_threshold_image;
 cv::Mat inner_threshold_image;
@@ -189,6 +191,13 @@ void save_to_file(std::string save_file_name)
 	outer_node["v_max"] = o_v_max_threshold;
 
 	fout << yaml_node; // dump it back into the file
+
+	//Call rosservice to save parameter remotely
+	std_srvs::Trigger srv;
+	if(save_file_srv.call(srv))
+		ROS_INFO("%s\n", srv.response.message.c_str());
+	else
+		ROS_ERROR("Failed to call service");
 }
 
 void button_cb(int state,void* _void)
@@ -253,6 +262,9 @@ int main(int argc, char* argv[])
 
 	ros::Subscriber inner_threshold_image_sub;
 	ros::Subscriber outer_threshold_image_sub;
+
+	save_file_srv = nh.serviceClient<std_srvs::Trigger>("save_yaml_parameter");
+
 
 	if(color_spec == "yellow" || color_spec == "both")
 	{

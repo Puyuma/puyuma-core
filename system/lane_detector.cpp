@@ -211,35 +211,49 @@ void LaneDetector::append_yaml_data(YAML::Emitter& yaml_handler, string key, int
 	yaml_handler << YAML::Value << value;
 }
 
-void LaneDetector::save_thresholding_yaml()
+bool LaneDetector::save_thresholding_yaml()
 {
 	YAML::Emitter out;
 
 	out << YAML::BeginMap;
-	append_yaml_data(out, "outer_h_max", outer_threshold_h_max);
-	append_yaml_data(out, "outer_h_min", outer_threshold_h_min);
-	append_yaml_data(out, "outer_s_max", outer_threshold_s_max);
-	append_yaml_data(out, "outer_s_min", outer_threshold_s_min);
-	append_yaml_data(out, "outer_v_max", outer_threshold_v_max);
-	append_yaml_data(out, "outer_v_min", outer_threshold_v_min);
 
-	append_yaml_data(out, "inner_h_max", inner_threshold_h_max);
-	append_yaml_data(out, "inner_h_min", inner_threshold_h_min);
-	append_yaml_data(out, "inner_s_max", inner_threshold_s_max);
-	append_yaml_data(out, "inner_s_min", inner_threshold_s_min);
-	append_yaml_data(out, "inner_v_max", inner_threshold_v_max);
-	append_yaml_data(out, "inner_v_min", inner_threshold_v_min);
+	out << YAML::Key << "outer" << YAML::Value << YAML::BeginMap;
+
+	append_yaml_data(out, "h_min", outer_threshold_h_min);
+	append_yaml_data(out, "h_max", outer_threshold_h_max);
+	append_yaml_data(out, "s_min", outer_threshold_s_min);
+	append_yaml_data(out, "s_max", outer_threshold_s_max);
+	append_yaml_data(out, "v_min", outer_threshold_v_min);
+	append_yaml_data(out, "v_max", outer_threshold_v_max);
+
+	out << YAML::EndMap;
+
+	out << YAML::Key << "inner" << YAML::Value << YAML::BeginMap;	
+
+	append_yaml_data(out, "h_min", inner_threshold_h_min);
+	append_yaml_data(out, "h_max", inner_threshold_h_max);
+	append_yaml_data(out, "s_min", inner_threshold_s_min);
+	append_yaml_data(out, "s_max", inner_threshold_s_max);
+	append_yaml_data(out, "v_min", inner_threshold_v_min);
+	append_yaml_data(out, "v_max", inner_threshold_v_max);
+
+	out << YAML::EndMap << YAML::EndMap;
 
 	/* Save yaml into file */
 	string file_path = yaml_path + "hsv_thresholding.yaml";
 
-	fstream fp;
-	fp.open(file_path.c_str(), ios::out);
+	cout << file_path << endl;
 
-	if(!fp) {
+	fstream fp;
+	fp.open(file_path, ios::out);
+
+	cout << out.c_str();
+	if(fp) {
 		fp << out.c_str() << endl; //Write yaml
+		return true;
 	} else {
 		ROS_INFO("Failed to save the thresholding setting!");
+		return false;
 	}
 }
 

@@ -9,6 +9,7 @@
 #include <raspicam/raspicam_cv.h>
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
+#include <std_srvs/Trigger.h>
 
 #include "queue.hpp"
 
@@ -135,6 +136,24 @@ void load_yaml_parameter()
 
 }
 
+bool save_yaml_parameter(std_srvs::Trigger::Request &req,std_srvs::Trigger::Response &res)
+{
+	bool result = lane_detector->save_thresholding_yaml();
+	if(result == true)
+	{
+		res.success = true;
+		res.message = "Yaml_parameter saved";
+		ROS_INFO("Yaml_parameter saved");
+		return true;
+	}
+	else{
+		res.success = false;
+		res.message = "Fail to save yaml_parameter";
+		ROS_INFO("Fail to save yaml_parameter");
+		return false;
+	}
+}
+
 void camera_thread_handler()
 {
 	cv::Mat frame;
@@ -224,6 +243,9 @@ int main(int argc, char* argv[])
 		node.subscribe("/xenobot/calibration/threshold_setting", 10, threshold_setting_callback);
 	wheel_command_subscriber =
 		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
+
+	ros::ServiceServer save_yaml_srv = node.advertiseService("save_yaml_parameter", save_yaml_parameter);
+
 
 	load_yaml_parameter();
 
