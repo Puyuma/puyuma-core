@@ -11,6 +11,49 @@
 #include "setting.hpp"
 
 using namespace cv;
+std::string yaml_path;
+
+bool load_intrinsic_calibration(std::string yaml_path,
+    cv::Mat& camera_matrix, cv::Mat& distort_coefficients)
+{
+    try {
+		yaml_path = yaml_path + "intrinsic_calibration.yaml";
+        YAML::Node yaml = YAML::LoadFile(yaml_path);
+        double intrinsic_array[9];
+        double distort_array[5];
+
+        for(int i = 0; i < 9; i++) {
+            intrinsic_array[i] = yaml["camera_matrix"]["data"][i].as<double>();
+        }
+        camera_matrix = (cv::Mat1d(3, 3) << 
+            intrinsic_array[0], intrinsic_array[1], intrinsic_array[2],
+            intrinsic_array[3], intrinsic_array[4], intrinsic_array[5],
+            intrinsic_array[6], intrinsic_array[7], intrinsic_array[8]
+        );
+        for(int i = 0; i < 5; i++) {
+            distort_array[i] = yaml["distortion_coefficients"]["data"][i].as<double>();
+        }
+
+        distort_coefficients = (cv::Mat1d(1, 5) <<
+            distort_array[0], distort_array[1], 
+            distort_array[2], distort_array[3], distort_array[4]
+        );
+
+        /*ROS_INFO("Camera matrix:\n[%f %f %f]\t\n[%f %f %f]\t\n[%f %f %f]",
+            intrinsic_array[0], intrinsic_array[1], intrinsic_array[2],
+            intrinsic_array[3], intrinsic_array[4], intrinsic_array[5],
+            intrinsic_array[6], intrinsic_array[7], intrinsic_array[8]
+        );
+
+        ROS_INFO("Distortion coefficients:\n[%f %f %f %f %f]\n",
+            distort_array[0], distort_array[1], 
+            distort_array[2], distort_array[3], distort_array[4]);*/
+    } catch(...) {
+        return false;
+    }
+
+	return true;
+}
 
 void save_homography_matrix(cv::Mat& H)
 {
@@ -132,13 +175,19 @@ bool estimate_homography(cv::Mat& rectified_image, cv::Mat& H)
 
 int main(int argc, char* argv[])
 {
+
 	/* ROS initialization */
 	ros::init(argc, argv, "xenobot_extrinsic_calibration");
         ros::Time::init();
-	ros::NodeHandle nh;
+	ros::NodeHandle node;
         ros::Rate loop_rate(30);
 
-	ros::NodeHandle node;
+	/* Read ROS parameters*/
+
+	if(node.getParam("/config_path", yaml_path)==false){
+		ROS_INFO("Abort: no configuration path assigned");
+		return 0;
+	}
 
 	ros::Publisher homography_image_publisher = 
 		node.advertise<sensor_msgs::Image>("xenobot/homography_image", 1000);
@@ -170,14 +219,18 @@ int main(int argc, char* argv[])
 		camera.grab();
 		camera.retrieve(raw_image);
 
-		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 136.106985, 0.000000, 166.663269,
+		cv::Mat camera_matrix, distort_coefficients;
+		load_intrinsic_calibration(yaml_path, camera_matrix, distort_coefficients);
+
+
+/*		cv::Mat camera_matrix = (cv::Mat1d(3, 3) << 136.106985, 0.000000, 166.663269,
 							0.000000, 136.627212, 105.393529,
 							0.000000, 0.000000, 1.000000);
 		cv::Mat distort_coffecient = (cv::Mat1d(1, 5) <<
-			-0.246384, 0.037375, 0.000300, -0.001282, 0.000000);
+			-0.246384, 0.037375, 0.000300, -0.001282, 0.000000); */
 
 		cv::Mat distort_image;
-		cv::undistort(raw_image, distort_image, camera_matrix, distort_coffecient);
+		cv::undistort(raw_image, distort_image, camera_matrix, distort_coefficients);
 
 		//Image sharpening
 		Mat temp_image;
