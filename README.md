@@ -58,11 +58,19 @@ rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.031 image:=/
 
 ###2. Extrinsic calibration
 
+```
+roslaunch xenobot extrinsic_calibration.launch veh:=machine_name
+```
+
 ###3. Color detector calibration
 
 ```
-roslaunch xenobot activate_controller.launch veh:=machine_name calibrate:=true
+pi$ roslaunch xenobot activate_controller.launch veh:=machine_name cal:=true
+
+pc$ rosrun xenobot color_threshold_calibration _color:=[yellow | white | both]
 ```
+* inner == yellow
+* outer == white
 
 ##Activating the controller
 
