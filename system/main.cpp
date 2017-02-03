@@ -233,16 +233,16 @@ int main(int argc, char* argv[])
         ros::Time::init();
         ros::Rate loop_rate(30);
 
-	ros::NodeHandle node;
+	ros::NodeHandle node("xenobot");
 
 	raw_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 10);
+		node.advertise<sensor_msgs::Image>("raw_image", 10);
 	distort_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 10);
+		node.advertise<sensor_msgs::Image>("distort_image", 10);
 	threshold_setting_subscriber =
-		node.subscribe("/xenobot/calibration/threshold_setting", 10, threshold_setting_callback);
+		node.subscribe("calibration/threshold_setting", 10, threshold_setting_callback);
 	wheel_command_subscriber =
-		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
+		node.subscribe("wheel_command", 1, wheel_command_callback);
 
 	ros::ServiceServer save_yaml_srv = node.advertiseService("save_yaml_parameter", save_yaml_parameter);
 
