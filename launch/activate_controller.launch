@@ -1,11 +1,12 @@
 <launch>
+	<arg name="local" default="true"/>
+	<arg name="cal" default="false"/>
+
     <param name="config_path" value="$(find xenobot)/config/" />
 
     <param name="machine_name" value="$(arg veh)" />
 
-    <param name="calibrate" value="false" />
-
-    <arg name="local" default="true"/>
+    <param name="calibrate" value="$(arg cal)"/>
 
     <group if="$(arg local)">
         <node name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller" output="screen"/>

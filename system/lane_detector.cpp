@@ -553,6 +553,9 @@ void LaneDetector::send_visualize_image(
 	/* Pose */
 	float& d, float& phi, xenobot::segmentArray& segments_msg)
 {
+	if(!calibrate_mode)
+		return;
+
 	thread send_image_thread(
 		&LaneDetector::send_sucess_visualize_image_thread,
 		this,
@@ -572,6 +575,9 @@ void LaneDetector::send_visualize_image(
 	cv::Mat& distorted_image, cv::Mat& canny_image,
 	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image)
 {
+	if(!calibrate_mode)
+		return;
+
 	thread send_image_thread(
 		&LaneDetector::send_failed_visualize_image_thread,
 		this,
