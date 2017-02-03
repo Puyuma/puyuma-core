@@ -163,7 +163,7 @@ class LaneDetector {
 	       double inner_s_min, double inner_v_max, double inner_v_min
 	);
 
-	void save_thresholding_yaml();
+	bool save_thresholding_yaml();
 	bool load_yaml_setting();
 };
 
