@@ -14,10 +14,8 @@ pid_control_t pid_phi;
 
 bool load_pid_param(string _yaml_path)
 {
+	_yaml_path = _yaml_path + "pid.yaml";
 	try {
-		_yaml_path = _yaml_path + "pid.yaml";
-
-		ROS_INFO("%s", _yaml_path.c_str());
 
 		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
@@ -35,6 +33,7 @@ bool load_pid_param(string _yaml_path)
 		ROS_INFO("[Kp:%f, Ki:%f, Kd:%f]\n", pid_phi.kp, pid_phi.ki, pid_phi.kd);
 	} catch(...) {
 		//TODO: Load default
+		ROS_ERROR("Failed to open %s", _yaml_path.c_str());
 
 		pid_d.kp = 0;
 		pid_d.ki = 0;

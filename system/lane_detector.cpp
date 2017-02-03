@@ -133,8 +133,6 @@ bool LaneDetector::load_yaml_setting()
 bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 {
 	try {
-		ROS_INFO("%s", _yaml_path.c_str());
-
 		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
 		H = new cv::Mat(3, 3, CV_64F);
@@ -154,6 +152,7 @@ bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 			);
 		}
 	} catch(...) {
+		ROS_ERROR("Failed to load %s", _yaml_path.c_str());
 		return false;
 	}
 
@@ -168,8 +167,6 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 	int inner_h_min, inner_s_min, inner_v_min;
 
 	try {
-		ROS_INFO("%s", _yaml_path.c_str());
-
 		YAML::Node yaml_node = YAML::LoadFile(_yaml_path);
 
 		YAML::Node outer_node = yaml_node["outer"];
@@ -190,6 +187,7 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 		inner_v_min = inner_node["v_min"].as<int>();
 		inner_v_max = inner_node["v_max"].as<int>();
 	} catch(...) {
+		ROS_ERROR("Failed to load %s", _yaml_path.c_str());
 		return false;
 	}
 
@@ -242,17 +240,16 @@ bool LaneDetector::save_thresholding_yaml()
 	/* Save yaml into file */
 	string file_path = yaml_path + "hsv_thresholding.yaml";
 
-	cout << file_path << endl;
-
 	fstream fp;
 	fp.open(file_path, ios::out);
 
-	cout << out.c_str();
 	if(fp) {
 		fp << out.c_str() << endl; //Write yaml
+		ROS_INFO("Saved the thresholding setting to %s",file_path.c_str());
+		cout << out.c_str() << endl;
 		return true;
 	} else {
-		ROS_INFO("Failed to save the thresholding setting!");
+		ROS_ERROR("Failed to save the thresholding setting to %s",file_path.c_str());
 		return false;
 	}
 }

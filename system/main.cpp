@@ -38,6 +38,7 @@ ros::Publisher raw_image_publisher;
 ros::Publisher distort_image_publisher;
 ros::Subscriber threshold_setting_subscriber;
 ros::Subscriber wheel_command_subscriber;
+ros::ServiceServer save_yaml_srv;
 
 /* Camera */
 raspicam::RaspiCam_Cv camera;
@@ -88,13 +89,11 @@ bool save_yaml_parameter(std_srvs::Trigger::Request &req,std_srvs::Trigger::Resp
 	{
 		res.success = true;
 		res.message = "Yaml_parameter saved";
-		ROS_INFO("Yaml_parameter saved");
 		return true;
 	}
 	else{
 		res.success = false;
 		res.message = "Fail to save yaml_parameter";
-		ROS_INFO("Fail to save yaml_parameter");
 		return false;
 	}
 }
@@ -129,7 +128,6 @@ void load_yaml_parameter()
 	}
 
 	string test = yaml_path + machine_name + "/";
-	ROS_INFO("%s", test.c_str());	
 
 	//Load extrinsic calibration data and color thresholding setting
 	if(lane_detector->load_yaml_setting() == false) {
@@ -234,9 +232,9 @@ int main(int argc, char* argv[])
         ros::Rate loop_rate(30);
 
 	ros::NodeHandle node("xenobot");
-
-	
-	node.getParam("calibrate", calibrate_mode);
+	ros::NodeHandle nh;
+	if(!nh.getParam("/calibrate", calibrate_mode))
+		ROS_ERROR("Fail to get calibration mode");
 
 	if(calibrate_mode){
 		raw_image_publisher = 
@@ -245,7 +243,7 @@ int main(int argc, char* argv[])
 			node.advertise<sensor_msgs::Image>("distort_image", 10);
 		threshold_setting_subscriber =
 			node.subscribe("calibration/threshold_setting", 10, threshold_setting_callback);
-		ros::ServiceServer save_yaml_srv = 
+		save_yaml_srv = 
 			node.advertiseService("/xenobot/save_yaml_parameter", save_yaml_parameter);
 	}
 

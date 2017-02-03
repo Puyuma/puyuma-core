@@ -15,15 +15,15 @@ int motor_pwm_bias;
 
 bool read_motor_calibration(string _yaml_path)
 {
+	_yaml_path = _yaml_path + "motor.yaml";
 	try {
-		YAML::Node yaml = YAML::LoadFile(_yaml_path + "motor.yaml");
-		ROS_INFO("%s", _yaml_path.c_str());
+		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
 		motor_pwm_bias = (int)(yaml["motor_bias"].as<float>() * MOTOR_PWM_MAX);
 		ROS_INFO("Motor bias: %d", motor_pwm_bias);
 	} catch(...) {
 		motor_pwm_bias = 0;
-
+		ROS_INFO("Failed to load %s", _yaml_path.c_str());
 		return false;
 	}
 

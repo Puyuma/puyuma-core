@@ -195,7 +195,7 @@ void save_to_file(std::string save_file_name)
 	//Call rosservice to save parameter remotely
 	std_srvs::Trigger srv;
 	if(save_file_srv.call(srv))
-		ROS_INFO("%s\n", srv.response.message.c_str());
+		ROS_INFO("%s", srv.response.message.c_str());
 	else
 		ROS_ERROR("Failed to call service");
 }
