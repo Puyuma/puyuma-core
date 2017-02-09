@@ -18,6 +18,7 @@
   <buildtool_depend>std_msgs</buildtool_depend>
   <buildtool_depend>roscpp</buildtool_depend>
   <buildtool_depend>message_generation</buildtool_depend>
+  <buildtool_depend>apriltags</buildtool_depend>
 
   <run_depend>rospy</run_depend>
   <run_depend>std_msgs</run_depend>

@@ -15,5 +15,6 @@ void test_motor();
 void set_motor_pwm(int8_t left_pwm, int8_t right_pwm);
 void halt_motor();
 bool read_motor_calibration(string _yaml_path);
+void forward_motor();
 
 #endif

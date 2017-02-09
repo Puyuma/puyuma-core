@@ -11,6 +11,7 @@ find_package(
     std_msgs
     roscpp
 	message_generation
+	apriltags
 )
 
 find_package(Curses REQUIRED)
@@ -119,6 +120,7 @@ set(
     ./system/controller.cpp
     ./system/motor.cpp
     ./system/camera.cpp
+	./system/apriltags_detector.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})

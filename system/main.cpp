@@ -19,6 +19,7 @@
 #include "motor.hpp"
 #include "controller.hpp"
 #include "camera.hpp"
+#include "apriltags_detector.hpp"
 
 using namespace cv;
 
@@ -119,10 +120,9 @@ void load_yaml_parameter()
 	}
 
 
-	if(calibrate_mode == true){// || received_param == true) {
+	if(calibrate_mode == true) {
 		ROS_INFO("Calibration mode is enabled");
 		lane_detector = new LaneDetector(yaml_path + machine_name + "/", true);
-
 	} else {
 		lane_detector = new LaneDetector(yaml_path + machine_name + "/", false);
 	}
@@ -171,6 +171,13 @@ void self_driving_thread_handler()
 	cv::Mat frame;
 
 	while(1) {
+
+		if(mode == STOP_MODE){
+			halt_motor();
+			std::this_thread::yield();
+			continue;
+		}
+
 		raw_image_queue.pop(frame);
 
 		cv::Mat distort_image;
@@ -207,13 +214,49 @@ void self_driving_thread_handler()
 		if(get_pose == true) {
 			self_driving_controller(d, phi);
 		} else {
-			halt_motor();
+			forward_motor();
+			//halt_motor();
 		}
 
 		std::this_thread::yield();
 	}
 
 }
+
+void apriltags_detector_handler()
+{
+    ApriltagsDetector detector;
+    int apriltags_id;
+
+    cv::Mat image;
+    cv::Mat image_gray;
+
+    while(1)
+    {
+
+        raw_image_queue.front(image);
+        apriltags_id = detector.processImage(image, image_gray);
+
+        switch(apriltags_id)
+        {
+            case 0:
+                mode = STOP_MODE;
+                break;
+
+            default:
+                mode = SELF_DRIVING_MODE;
+                break;
+        }
+
+        cout << "Motor mode: " << mode << "\n";
+
+
+
+        std::this_thread::yield();
+    }
+    cv::waitKey(1);
+}
+
 
 void ros_spin_thread_handler()
 {
@@ -233,8 +276,8 @@ int main(int argc, char* argv[])
 
 	ros::NodeHandle node("xenobot");
 	ros::NodeHandle nh;
-	if(!nh.getParam("/calibrate", calibrate_mode))
-		ROS_ERROR("Fail to get calibration mode");
+	if(!nh.getParam("/calibrate", calibrate_mode)) 
+		ROS_INFO("Fail to get calibration mode,use \"true\" instead of \"1\".");
 
 	if(calibrate_mode){
 		raw_image_publisher = 
@@ -266,6 +309,7 @@ int main(int argc, char* argv[])
 	thread self_driving_thread(self_driving_thread_handler);
 	thread camera_thread(camera_thread_handler);
 	thread ros_spin_thread(ros_spin_thread_handler);
+	thread apriltags_detector_thread(apriltags_detector_handler);
 
 	pause();
 
