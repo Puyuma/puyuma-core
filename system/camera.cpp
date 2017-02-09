@@ -62,14 +62,14 @@ bool camera_setup(raspicam::RaspiCam_Cv& camera)
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
 	camera.set(CV_CAP_PROP_FRAME_WIDTH, (int)IMAGE_WIDTH);
 	camera.set(CV_CAP_PROP_FRAME_HEIGHT, (int)IMAGE_HEIGHT);
-	camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
-	camera.set(CV_CAP_PROP_CONTRAST, 50);
-	camera.set(CV_CAP_PROP_SATURATION, 100);
-	camera.set(CV_CAP_PROP_GAIN, 1);
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
-	camera.set(CV_CAP_PROP_EXPOSURE, 25);
-	camera.set(CV_CAP_PROP_WHITE_BALANCE_RED_V, 0);
-	camera.set(CV_CAP_PROP_WHITE_BALANCE_BLUE_U, 0);
+	camera.set(CV_CAP_PROP_BRIGHTNESS, 65);
+	camera.set(CV_CAP_PROP_CONTRAST, 85);
+	camera.set(CV_CAP_PROP_SATURATION, 50);
+	camera.set(CV_CAP_PROP_GAIN, 50);//1
+	//camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
+	camera.set(CV_CAP_PROP_EXPOSURE, 25);//25
+	camera.set(CV_CAP_PROP_WHITE_BALANCE_RED_V, -1);//-1);
+	camera.set(CV_CAP_PROP_WHITE_BALANCE_BLUE_U,-1);// -1);
 
 	return camera.open();
 }
