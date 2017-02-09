@@ -1,15 +1,14 @@
 outer:
- h_min: 0 
- h_max: 191
- s_min: 0
- s_max: 200
- v_min: 145
- v_max: 256
-
+  s_min: 0
+  s_max: 71
+  v_min: 80
+  h_max: 256
+  h_min: 0
+  v_max: 256
 inner:
- h_min: 0
- h_max: 31
- s_min: 70
- s_max: 256
- v_min: 30
- v_max: 256
+  s_max: 256
+  h_max: 111
+  s_min: 70
+  h_min: 55
+  v_min: 126
+  v_max: 256

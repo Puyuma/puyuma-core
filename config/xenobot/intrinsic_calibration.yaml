@@ -1,24 +1,20 @@
-camera_matrix:
-  cols: 3
-  data: [136.106985, 0.000000, 166.663269,
-	0.000000, 136.627212, 105.393529,
-	0.000000, 0.000000, 1.000000] 
-  rows: 3
-camera_name: xenobot/raw_image
-distortion_coefficients:
-  cols: 5
-  data: [-0.246384, 0.037375, 0.000300, -0.001282, 0.000000]
-  rows: 1
-distortion_model: plumb_bob
-image_height: 480
 image_width: 640
-projection_matrix:
-  cols: 4
-  data: [94.446724, 0.000000, 167.071002, 0.000000,
-	0.000000, 100.462776, 96.300424, 0.000000,
-	0.000000, 0.000000, 1.000000, 0.000000]
+image_height: 480
+camera_name: narrow_stereo
+camera_matrix:
   rows: 3
-rectification_matrix:
   cols: 3
-  data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  data: [291.017272, 0.000000, 287.874948, 0.000000, 292.693247, 222.823905, 0.000000, 0.000000, 1.000000]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.251025, 0.037288, 0.005371, 0.006356, 0.000000]
+rectification_matrix:
   rows: 3
+  cols: 3
+  data: [1.000000, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000, 0.000000, 1.000000]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [202.306488, 0.000000, 291.419944, 0.000000, 0.000000, 221.675156, 216.747522, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000]
