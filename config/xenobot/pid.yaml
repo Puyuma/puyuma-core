@@ -1,9 +1,9 @@
 pid_d:
-  kp: 2
+  kp: 3.5
   ki: 0
   kd: 0
 
 pid_phi:
-  kp: -0.2
+  kp: -0.25
   ki: 0
   kd: 0
