@@ -9,6 +9,7 @@
 #include <raspicam/raspicam_cv.h>
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
+#include <std_srvs/Trigger.h>
 
 #include "queue.hpp"
 
@@ -31,11 +32,13 @@ ros::Time joystick_trigger_time;
 
 //JOYSTICK_MODE, SELF_DRIVING_MODE, STOP_MODE
 int mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+bool calibrate_mode = false;
 
 ros::Publisher raw_image_publisher;
 ros::Publisher distort_image_publisher;
 ros::Subscriber threshold_setting_subscriber;
 ros::Subscriber wheel_command_subscriber;
+ros::ServiceServer save_yaml_srv;
 
 /* Camera */
 raspicam::RaspiCam_Cv camera;
@@ -79,6 +82,22 @@ void wheel_command_callback(const xenobot::wheel_command& wheel_msg)
 	}
 }
 
+bool save_yaml_parameter(std_srvs::Trigger::Request &req,std_srvs::Trigger::Response &res)
+{
+	bool result = lane_detector->save_thresholding_yaml();
+	if(result == true)
+	{
+		res.success = true;
+		res.message = "Yaml_parameter saved";
+		return true;
+	}
+	else{
+		res.success = false;
+		res.message = "Fail to save yaml_parameter";
+		return false;
+	}
+}
+
 void load_yaml_parameter()
 {
 	ros::NodeHandle nh;
@@ -99,18 +118,16 @@ void load_yaml_parameter()
 		return;
 	}
 
-	bool calibrate_mode;
-	bool received_param = nh.getParam("calibrate", calibrate_mode);
 
-	if(calibrate_mode == true || received_param == true) {
+	if(calibrate_mode == true){// || received_param == true) {
 		ROS_INFO("Calibration mode is enabled");
 		lane_detector = new LaneDetector(yaml_path + machine_name + "/", true);
+
 	} else {
 		lane_detector = new LaneDetector(yaml_path + machine_name + "/", false);
 	}
 
 	string test = yaml_path + machine_name + "/";
-	ROS_INFO("%s", test.c_str());	
 
 	//Load extrinsic calibration data and color thresholding setting
 	if(lane_detector->load_yaml_setting() == false) {
@@ -214,16 +231,25 @@ int main(int argc, char* argv[])
         ros::Time::init();
         ros::Rate loop_rate(30);
 
-	ros::NodeHandle node;
+	ros::NodeHandle node("xenobot");
+	ros::NodeHandle nh;
+	if(!nh.getParam("/calibrate", calibrate_mode))
+		ROS_ERROR("Fail to get calibration mode");
 
-	raw_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/raw_image", 10);
-	distort_image_publisher = 
-		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 10);
-	threshold_setting_subscriber =
-		node.subscribe("/xenobot/calibration/threshold_setting", 10, threshold_setting_callback);
+	if(calibrate_mode){
+		raw_image_publisher = 
+			node.advertise<sensor_msgs::Image>("raw_image", 10);
+		distort_image_publisher = 
+			node.advertise<sensor_msgs::Image>("distort_image", 10);
+		threshold_setting_subscriber =
+			node.subscribe("calibration/threshold_setting", 10, threshold_setting_callback);
+		save_yaml_srv = 
+			node.advertiseService("/xenobot/save_yaml_parameter", save_yaml_parameter);
+	}
+
 	wheel_command_subscriber =
-		node.subscribe("/xenobot/wheel_command", 1, wheel_command_callback);
+		node.subscribe("wheel_command", 1, wheel_command_callback);
+
 
 	load_yaml_parameter();
 

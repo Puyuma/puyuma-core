@@ -133,8 +133,6 @@ bool LaneDetector::load_yaml_setting()
 bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 {
 	try {
-		ROS_INFO("%s", _yaml_path.c_str());
-
 		YAML::Node yaml = YAML::LoadFile(_yaml_path);
 
 		H = new cv::Mat(3, 3, CV_64F);
@@ -154,6 +152,7 @@ bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 			);
 		}
 	} catch(...) {
+		ROS_ERROR("Failed to load %s", _yaml_path.c_str());
 		return false;
 	}
 
@@ -168,11 +167,9 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 	int inner_h_min, inner_s_min, inner_v_min;
 
 	try {
-		ROS_INFO("%s", _yaml_path.c_str());
-
 		YAML::Node yaml_node = YAML::LoadFile(_yaml_path);
 
-		YAML::Node outter_node = yaml_node["outter"];
+		YAML::Node outer_node = yaml_node["outer"];
 
 		outer_h_min = outer_node["h_min"].as<int>();
 		outer_h_max = outer_node["h_max"].as<int>();
@@ -190,6 +187,7 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 		inner_v_min = inner_node["v_min"].as<int>();
 		inner_v_max = inner_node["v_max"].as<int>();
 	} catch(...) {
+		ROS_ERROR("Failed to load %s", _yaml_path.c_str());
 		return false;
 	}
 
@@ -211,35 +209,48 @@ void LaneDetector::append_yaml_data(YAML::Emitter& yaml_handler, string key, int
 	yaml_handler << YAML::Value << value;
 }
 
-void LaneDetector::save_thresholding_yaml()
+bool LaneDetector::save_thresholding_yaml()
 {
 	YAML::Emitter out;
 
 	out << YAML::BeginMap;
-	append_yaml_data(out, "outer_h_max", outer_threshold_h_max);
-	append_yaml_data(out, "outer_h_min", outer_threshold_h_min);
-	append_yaml_data(out, "outer_s_max", outer_threshold_s_max);
-	append_yaml_data(out, "outer_s_min", outer_threshold_s_min);
-	append_yaml_data(out, "outer_v_max", outer_threshold_v_max);
-	append_yaml_data(out, "outer_v_min", outer_threshold_v_min);
 
-	append_yaml_data(out, "inner_h_max", inner_threshold_h_max);
-	append_yaml_data(out, "inner_h_min", inner_threshold_h_min);
-	append_yaml_data(out, "inner_s_max", inner_threshold_s_max);
-	append_yaml_data(out, "inner_s_min", inner_threshold_s_min);
-	append_yaml_data(out, "inner_v_max", inner_threshold_v_max);
-	append_yaml_data(out, "inner_v_min", inner_threshold_v_min);
+	out << YAML::Key << "outer" << YAML::Value << YAML::BeginMap;
+
+	append_yaml_data(out, "h_min", outer_threshold_h_min);
+	append_yaml_data(out, "h_max", outer_threshold_h_max);
+	append_yaml_data(out, "s_min", outer_threshold_s_min);
+	append_yaml_data(out, "s_max", outer_threshold_s_max);
+	append_yaml_data(out, "v_min", outer_threshold_v_min);
+	append_yaml_data(out, "v_max", outer_threshold_v_max);
+
+	out << YAML::EndMap;
+
+	out << YAML::Key << "inner" << YAML::Value << YAML::BeginMap;	
+
+	append_yaml_data(out, "h_min", inner_threshold_h_min);
+	append_yaml_data(out, "h_max", inner_threshold_h_max);
+	append_yaml_data(out, "s_min", inner_threshold_s_min);
+	append_yaml_data(out, "s_max", inner_threshold_s_max);
+	append_yaml_data(out, "v_min", inner_threshold_v_min);
+	append_yaml_data(out, "v_max", inner_threshold_v_max);
+
+	out << YAML::EndMap << YAML::EndMap;
 
 	/* Save yaml into file */
 	string file_path = yaml_path + "hsv_thresholding.yaml";
 
 	fstream fp;
-	fp.open(file_path.c_str(), ios::out);
+	fp.open(file_path, ios::out);
 
-	if(!fp) {
+	if(fp) {
 		fp << out.c_str() << endl; //Write yaml
+		ROS_INFO("Saved the thresholding setting to %s",file_path.c_str());
+		cout << out.c_str() << endl;
+		return true;
 	} else {
-		ROS_INFO("Failed to save the thresholding setting!");
+		ROS_ERROR("Failed to save the thresholding setting to %s",file_path.c_str());
+		return false;
 	}
 }
 
@@ -539,6 +550,9 @@ void LaneDetector::send_visualize_image(
 	/* Pose */
 	float& d, float& phi, xenobot::segmentArray& segments_msg)
 {
+	if(!calibrate_mode)
+		return;
+
 	thread send_image_thread(
 		&LaneDetector::send_sucess_visualize_image_thread,
 		this,
@@ -558,6 +572,9 @@ void LaneDetector::send_visualize_image(
 	cv::Mat& distorted_image, cv::Mat& canny_image,
 	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image)
 {
+	if(!calibrate_mode)
+		return;
+
 	thread send_image_thread(
 		&LaneDetector::send_failed_visualize_image_thread,
 		this,
