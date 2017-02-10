@@ -1,0 +1,18 @@
+<launch>
+    <param name="config_path" value="/home/xenobot/catkin_ws/src/xenobot/config/xenobot/" />
+
+    <param name="machine_name" value="$(arg veh)" />
+
+    <arg name="local" default="true"/>
+
+    <group if="$(arg local)">
+        <node name="$(anon act_ctrl)" pkg="xenobot" type="extrinsic_calibration" output="screen"/>
+    </group>
+
+    <group unless="$(arg local)">
+        <machine name="remote" address="$(arg veh).local" user="xenobot"
+		env-loader="~/catkin_ws/src/xenobot/env.sh" />
+        <node machine="remote" name="$(anon act_ctrl)" pkg="xenobot" type="extrinsic_calibration"
+                output="screen"/>
+    </group>
+</launch>

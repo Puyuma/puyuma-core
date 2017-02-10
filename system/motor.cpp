@@ -74,3 +74,8 @@ void halt_motor()
 
 	pid_halt();
 }
+
+void forward_motor()
+{
+	set_motor_pwm((int8_t)30, (int8_t)30);
+}
