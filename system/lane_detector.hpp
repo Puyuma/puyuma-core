@@ -75,17 +75,35 @@ typedef struct {
 	float phi;
 } segment_t;
 
+class HsvThreshold {
+	public:
+	int h_min;
+	int h_max;
+	int s_min;
+	int s_max;
+	int v_min;
+	int v_max;
+
+	HsvThreshold(int h_min,int h_max, int s_min,int s_max, int v_min, int v_max):
+	h_min(h_min),h_max(h_max),s_min(s_min),s_max(s_max),v_min(v_min),v_max(v_max){}
+
+	void set_hsv(int h_min,int h_max, int s_min,int s_max, int v_min, int v_max)
+	{
+		this->h_min=h_min;
+		this->h_max=h_max;
+		this->s_min=s_min;
+		this->s_max=s_max;
+		this->v_min=v_min;
+		this->v_max=v_max;
+	}
+};
+
 class LaneDetector {
 	private:
 	string yaml_path;
 
-	int outer_threshold_h_min, outer_threshold_h_max;
-	int outer_threshold_s_min, outer_threshold_s_max;
-	int outer_threshold_v_min, outer_threshold_v_max;
-
-	int inner_threshold_h_min, inner_threshold_h_max;
-	int inner_threshold_s_min, inner_threshold_s_max;
-	int inner_threshold_v_min, inner_threshold_v_max;
+	HsvThreshold inner_threshold;
+	HsvThreshold outer_threshold;
 
 	cv::Mat outer_hsv_image, outer_threshold_image;
 	cv::Mat inner_hsv_image, inner_threshold_image;
@@ -100,8 +118,8 @@ class LaneDetector {
 	bool calibrate_mode;
 
 	ros::NodeHandle node;
-        ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
-        ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
+	ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
+	ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher canny_img_publisher;
 	ros::Publisher marked_image_publisher;
 	ros::Publisher bird_view_img_publisher;
@@ -156,13 +174,7 @@ class LaneDetector {
 	LaneDetector(string yaml_path, bool calibrate_mode);
 
 	bool lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi);
-	void set_hsv(
-	       double outer_h_max, double outer_h_min, double outer_s_max,
-	       double outer_s_min, double outer_v_max, double outer_v_min,
-	       double inner_h_max, double inner_h_min, double inner_s_max,
-	       double inner_s_min, double inner_v_max, double inner_v_min
-	);
-
+	bool set_hsv(char color,int h_min,int h_max,int s_min,int s_max,int v_min,int v_max);
 	bool save_thresholding_yaml();
 	bool load_yaml_setting();
 };

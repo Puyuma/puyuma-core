@@ -58,18 +58,13 @@ void handle_joystick()
 void threshold_setting_callback(const xenobot::threshold_setting& threshold_setting_msg)
 {
 	lane_detector->set_hsv(
-		threshold_setting_msg.outer_h_max,
-		threshold_setting_msg.outer_h_min,
-		threshold_setting_msg.outer_s_max,
-		threshold_setting_msg.outer_s_min,
-		threshold_setting_msg.outer_v_max,
-		threshold_setting_msg.outer_v_min,
-		threshold_setting_msg.inner_h_max,
-		threshold_setting_msg.inner_h_min,
-		threshold_setting_msg.inner_s_max,
-		threshold_setting_msg.inner_s_min,
-		threshold_setting_msg.inner_v_max,
-		threshold_setting_msg.inner_v_min
+		threshold_setting_msg.color,
+		threshold_setting_msg.h_min,
+		threshold_setting_msg.h_max,
+		threshold_setting_msg.s_min,
+		threshold_setting_msg.s_max,
+		threshold_setting_msg.v_min,
+		threshold_setting_msg.v_max
 	);
 }
 

@@ -23,17 +23,8 @@
 using namespace std;
 using namespace cv;
 
-void on_trackbar(int, void *)
-{
-}
-
 LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
-	outer_threshold_h_min(0), outer_threshold_h_max(256),
-	outer_threshold_s_min(0), outer_threshold_s_max(256),
-	outer_threshold_v_min(0), outer_threshold_v_max(256),
-	inner_threshold_h_min(0), inner_threshold_h_max(256),
-	inner_threshold_s_min(0), inner_threshold_s_max(256),
-	inner_threshold_v_min(0), inner_threshold_v_max(256)
+	outer_threshold(0,255,0,255,0,255),inner_threshold(0,255,0,255,0,255)
 {
 	this->calibrate_mode = calibrate_mode;
 
@@ -99,25 +90,18 @@ void LaneDetector::publish_images(
 	bird_view_img_publisher.publish(img_msg);
 }
 
-void LaneDetector::set_hsv(
-	double outer_h_max, double outer_h_min, double outer_s_max,
-	double outer_s_min, double outer_v_max, double outer_v_min,
-	double inner_h_max, double inner_h_min, double inner_s_max,
-	double inner_s_min, double inner_v_max, double inner_v_min)
+bool LaneDetector::set_hsv(
+	char color,int h_min,int h_max,
+	int s_min,int s_max,int v_min,int v_max)
 {
-	outer_threshold_h_min = outer_h_min;
-	outer_threshold_h_max = outer_h_max;
-	outer_threshold_s_min = outer_s_min;
-	outer_threshold_s_max = outer_s_max;
-	outer_threshold_v_min = outer_v_min;
-	outer_threshold_v_max = outer_v_max;
+	HsvThreshold* threshold;
+	switch (color){
+		case 'w': threshold = &outer_threshold;
+		case 'y': threshold = &inner_threshold;
+		default: ROS_ERROR("Undefined color code :'%c'",color);
+	}
 
-	inner_threshold_h_min = inner_h_min;
-	inner_threshold_h_max = inner_h_max;
-	inner_threshold_s_min = inner_s_min;
-	inner_threshold_s_max = inner_s_max;
-	inner_threshold_v_min = inner_v_min;
-	inner_threshold_v_max = inner_v_max;
+	threshold->set_hsv(h_min,h_max,s_min,s_max,v_min,v_max);
 }
 
 bool LaneDetector::load_yaml_setting()
@@ -194,14 +178,14 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 		return false;
 	}
 
-	set_hsv(
-		outer_h_max, outer_h_min,
-		outer_s_max, outer_s_min,
-		outer_v_max, outer_v_min,
-		inner_h_max, inner_h_min,
-		inner_s_max, inner_s_min,
-		inner_v_max, inner_v_min
-	);
+	outer_threshold.set_hsv(
+		outer_h_min, outer_h_max,
+		outer_s_min, outer_s_max,
+		outer_v_min, outer_v_max);
+	inner_threshold.set_hsv(
+		inner_h_min, inner_h_max,
+		inner_s_min, inner_s_max,
+		inner_v_min, inner_v_max);
 
 	return true;
 }
@@ -220,23 +204,23 @@ bool LaneDetector::save_thresholding_yaml()
 
 	out << YAML::Key << "outer" << YAML::Value << YAML::BeginMap;
 
-	append_yaml_data(out, "h_min", outer_threshold_h_min);
-	append_yaml_data(out, "h_max", outer_threshold_h_max);
-	append_yaml_data(out, "s_min", outer_threshold_s_min);
-	append_yaml_data(out, "s_max", outer_threshold_s_max);
-	append_yaml_data(out, "v_min", outer_threshold_v_min);
-	append_yaml_data(out, "v_max", outer_threshold_v_max);
+	append_yaml_data(out, "h_min", outer_threshold.h_min);
+	append_yaml_data(out, "h_max", outer_threshold.h_max);
+	append_yaml_data(out, "s_min", outer_threshold.s_min);
+	append_yaml_data(out, "s_max", outer_threshold.s_max);
+	append_yaml_data(out, "v_min", outer_threshold.v_min);
+	append_yaml_data(out, "v_max", outer_threshold.v_max);
 
 	out << YAML::EndMap;
 
 	out << YAML::Key << "inner" << YAML::Value << YAML::BeginMap;	
 
-	append_yaml_data(out, "h_min", inner_threshold_h_min);
-	append_yaml_data(out, "h_max", inner_threshold_h_max);
-	append_yaml_data(out, "s_min", inner_threshold_s_min);
-	append_yaml_data(out, "s_max", inner_threshold_s_max);
-	append_yaml_data(out, "v_min", inner_threshold_v_min);
-	append_yaml_data(out, "v_max", inner_threshold_v_max);
+	append_yaml_data(out, "h_min", inner_threshold.h_min);
+	append_yaml_data(out, "h_max", inner_threshold.h_max);
+	append_yaml_data(out, "s_min", inner_threshold.s_min);
+	append_yaml_data(out, "s_max", inner_threshold.s_max);
+	append_yaml_data(out, "v_min", inner_threshold.v_min);
+	append_yaml_data(out, "v_max", inner_threshold.v_max);
 
 	out << YAML::EndMap << YAML::EndMap;
 
@@ -603,15 +587,15 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	/* Binarization (Color thresholding) */
 	cv::inRange(
 		outer_hsv_image,
-		Scalar(outer_threshold_h_min, outer_threshold_s_min, outer_threshold_v_min),
-		Scalar(outer_threshold_h_max, outer_threshold_s_max, outer_threshold_v_max),
+		Scalar(outer_threshold.h_min, outer_threshold.s_min, outer_threshold.v_min),
+		Scalar(outer_threshold.h_max, outer_threshold.s_max, outer_threshold.v_max),
 		outer_threshold_image
 	);
 
 	cv::inRange(
 		inner_hsv_image,
-		Scalar(inner_threshold_h_min, inner_threshold_s_min, inner_threshold_v_min),
-		Scalar(inner_threshold_h_max, inner_threshold_s_max, inner_threshold_v_max),
+		Scalar(inner_threshold.h_min, inner_threshold.s_min, inner_threshold.v_min),
+		Scalar(inner_threshold.h_max, inner_threshold.s_max, inner_threshold.v_max),
 		inner_threshold_image
 	);
 
@@ -728,7 +712,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		//Drop the vote if it is out of the boundary
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
 			inner_xeno_lines.erase(inner_xeno_lines.begin() + i);
-			continue;	
+			continue;
 		}
 
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
