@@ -9,6 +9,7 @@
 #include <std_msgs/Float32.h>
 #include <xenobot/segment.h>
 #include <xenobot/segmentArray.h>
+#include <xenobot/SendHsv.h>
 
 #include "lane_detector.hpp"
 #include "xeno_math.hpp"
@@ -94,14 +95,17 @@ bool LaneDetector::set_hsv(
 	char color,int h_min,int h_max,
 	int s_min,int s_max,int v_min,int v_max)
 {
-	HsvThreshold* threshold;
-	switch (color){
-		case 'w': threshold = &outer_threshold;
-		case 'y': threshold = &inner_threshold;
-		default: ROS_ERROR("Undefined color code :'%c'",color);
-	}
+	HsvThreshold* threshold = get_threshold(color);
 
 	threshold->set_hsv(h_min,h_max,s_min,s_max,v_min,v_max);
+}
+
+HsvThreshold* LaneDetector::get_threshold(char color) {
+	switch (color){
+        case 'w': return &outer_threshold;
+        case 'y': return &inner_threshold;
+        default: ROS_ERROR("Undefined color code :'%c'",color);
+    }
 }
 
 bool LaneDetector::load_yaml_setting()
@@ -239,6 +243,17 @@ bool LaneDetector::save_thresholding_yaml()
 		ROS_ERROR("Failed to save the thresholding setting to %s",file_path.c_str());
 		return false;
 	}
+}
+
+void LaneDetector::send_hsv(char color,xenobot::SendHsv::Response &res)
+{
+	HsvThreshold* threshold = get_threshold(color);
+	res.h_min = threshold->h_min;
+	res.h_max = threshold->h_max;
+	res.s_min = threshold->s_min;
+	res.s_max = threshold->s_max;
+	res.v_min = threshold->v_min;
+	res.v_max = threshold->v_max;
 }
 
 void LaneDetector::mark_lane(cv::Mat& lane_mark_image, vector<segment_t>& lines,

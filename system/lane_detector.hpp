@@ -6,8 +6,12 @@
 #include <yaml-cpp/yaml.h>
 #include <cv_bridge/cv_bridge.h>
 
+#include <hsv_threshold.h>
+
+//ros generate msg,srv file
 #include <xenobot/segment.h>
 #include <xenobot/segmentArray.h>
+#include <xenobot/SendHsv.h>
 
 using namespace std;
 
@@ -75,28 +79,6 @@ typedef struct {
 	float phi;
 } segment_t;
 
-class HsvThreshold {
-	public:
-	int h_min;
-	int h_max;
-	int s_min;
-	int s_max;
-	int v_min;
-	int v_max;
-
-	HsvThreshold(int h_min,int h_max, int s_min,int s_max, int v_min, int v_max):
-	h_min(h_min),h_max(h_max),s_min(s_min),s_max(s_max),v_min(v_min),v_max(v_max){}
-
-	void set_hsv(int h_min,int h_max, int s_min,int s_max, int v_min, int v_max)
-	{
-		this->h_min=h_min;
-		this->h_max=h_max;
-		this->s_min=s_min;
-		this->s_max=s_max;
-		this->v_min=v_min;
-		this->v_max=v_max;
-	}
-};
 
 class LaneDetector {
 	private:
@@ -174,9 +156,13 @@ class LaneDetector {
 	LaneDetector(string yaml_path, bool calibrate_mode);
 
 	bool lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi);
+
+	//hsv setting relate function
 	bool set_hsv(char color,int h_min,int h_max,int s_min,int s_max,int v_min,int v_max);
 	bool save_thresholding_yaml();
 	bool load_yaml_setting();
+	void send_hsv(char color,xenobot::SendHsv::Response &res);
+	HsvThreshold* get_threshold(char color);
 };
 
 #endif

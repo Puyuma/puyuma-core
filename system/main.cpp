@@ -10,6 +10,7 @@
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
 #include <std_srvs/Trigger.h>
+#include <xenobot/SendHsv.h>
 
 #include "queue.hpp"
 
@@ -40,7 +41,7 @@ ros::Publisher distort_image_publisher;
 ros::Subscriber threshold_setting_subscriber;
 ros::Subscriber wheel_command_subscriber;
 ros::ServiceServer save_yaml_srv;
-
+ros::ServiceServer send_hsv_srv;
 /* Camera */
 raspicam::RaspiCam_Cv camera;
 Queue<cv::Mat> raw_image_queue;
@@ -92,6 +93,14 @@ bool save_yaml_parameter(std_srvs::Trigger::Request &req,std_srvs::Trigger::Resp
 		res.message = "Fail to save yaml_parameter";
 		return false;
 	}
+}
+
+bool send_hsv_threshold(xenobot::SendHsv::Request &req,xenobot::SendHsv::Response &res)
+{
+    //bool result = lane_detector->save_thresholding_yaml();
+	char color = req.color;
+	lane_detector->send_hsv(color,res);
+	return true;
 }
 
 void load_yaml_parameter()
@@ -270,8 +279,8 @@ int main(int argc, char* argv[])
         ros::Rate loop_rate(30);
 
 	ros::NodeHandle node("xenobot");
-	ros::NodeHandle nh;
-	if(!nh.getParam("/calibrate", calibrate_mode)) 
+
+	if(!node.getParam("/calibrate", calibrate_mode)) 
 		ROS_INFO("Fail to get calibration mode,use \"true\" instead of \"1\".");
 
 	if(calibrate_mode){
@@ -282,7 +291,9 @@ int main(int argc, char* argv[])
 		threshold_setting_subscriber =
 			node.subscribe("calibration/threshold_setting", 10, threshold_setting_callback);
 		save_yaml_srv = 
-			node.advertiseService("/xenobot/save_yaml_parameter", save_yaml_parameter);
+			node.advertiseService("save_yaml_parameter", save_yaml_parameter);
+		send_hsv_srv =
+			node.advertiseService("send_hsv_threshold", send_hsv_threshold);
 	}
 
 	wheel_command_subscriber =
