@@ -25,6 +25,11 @@ add_message_files(
     segment.msg
 )
 
+add_service_files(
+	FILES
+	SendHsv.srv
+)
+
 generate_messages(DEPENDENCIES std_msgs)
 
 catkin_package(
@@ -38,6 +43,7 @@ catkin_package(
 set(
     COLOR_THRESHOLD_INC
     ./calibration/color_threshold
+	./common
 )
 
 set(

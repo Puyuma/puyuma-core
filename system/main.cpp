@@ -10,6 +10,7 @@
 #include <yaml-cpp/yaml.h>
 #include <ros/ros.h>
 #include <std_srvs/Trigger.h>
+#include <xenobot/SendHsv.h>
 
 #include "queue.hpp"
 
@@ -32,7 +33,8 @@ bool joystick_triggered;
 ros::Time joystick_trigger_time;
 
 //JOYSTICK_MODE, SELF_DRIVING_MODE, STOP_MODE
-int mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+ControllerMode mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+Direction direction;
 bool calibrate_mode = false;
 
 ros::Publisher raw_image_publisher;
@@ -40,7 +42,7 @@ ros::Publisher distort_image_publisher;
 ros::Subscriber threshold_setting_subscriber;
 ros::Subscriber wheel_command_subscriber;
 ros::ServiceServer save_yaml_srv;
-
+ros::ServiceServer send_hsv_srv;
 /* Camera */
 raspicam::RaspiCam_Cv camera;
 Queue<cv::Mat> raw_image_queue;
@@ -58,18 +60,13 @@ void handle_joystick()
 void threshold_setting_callback(const xenobot::threshold_setting& threshold_setting_msg)
 {
 	lane_detector->set_hsv(
-		threshold_setting_msg.outer_h_max,
-		threshold_setting_msg.outer_h_min,
-		threshold_setting_msg.outer_s_max,
-		threshold_setting_msg.outer_s_min,
-		threshold_setting_msg.outer_v_max,
-		threshold_setting_msg.outer_v_min,
-		threshold_setting_msg.inner_h_max,
-		threshold_setting_msg.inner_h_min,
-		threshold_setting_msg.inner_s_max,
-		threshold_setting_msg.inner_s_min,
-		threshold_setting_msg.inner_v_max,
-		threshold_setting_msg.inner_v_min
+		threshold_setting_msg.color,
+		threshold_setting_msg.h_min,
+		threshold_setting_msg.h_max,
+		threshold_setting_msg.s_min,
+		threshold_setting_msg.s_max,
+		threshold_setting_msg.v_min,
+		threshold_setting_msg.v_max
 	);
 }
 
@@ -97,6 +94,14 @@ bool save_yaml_parameter(std_srvs::Trigger::Request &req,std_srvs::Trigger::Resp
 		res.message = "Fail to save yaml_parameter";
 		return false;
 	}
+}
+
+bool send_hsv_threshold(xenobot::SendHsv::Request &req,xenobot::SendHsv::Response &res)
+{
+    //bool result = lane_detector->save_thresholding_yaml();
+	char color = req.color;
+	lane_detector->send_hsv(color,res);
+	return true;
 }
 
 void load_yaml_parameter()
@@ -211,12 +216,16 @@ void self_driving_thread_handler()
 #endif
 
 		/* PID controller */
-		if(get_pose == true) {
-			self_driving_controller(d, phi);
-		} else {
-			forward_motor();
-			//halt_motor();
-		}
+		        if(mode == SELF_DRIVING_MODE) {
+            if(get_pose == true)
+                self_driving_controller(d, phi);
+            else
+                forward_motor(30, 30);
+        }
+        else if(mode == INTERSECTION) {
+            intersection_controller(direction, get_pose, d, phi);
+            lane_detector->forwarding++;
+        }
 
 		std::this_thread::yield();
 	}
@@ -250,8 +259,6 @@ void apriltags_detector_handler()
 
         cout << "Motor mode: " << mode << "\n";
 
-
-
         std::this_thread::yield();
     }
     cv::waitKey(1);
@@ -275,8 +282,8 @@ int main(int argc, char* argv[])
         ros::Rate loop_rate(30);
 
 	ros::NodeHandle node("xenobot");
-	ros::NodeHandle nh;
-	if(!nh.getParam("/calibrate", calibrate_mode)) 
+
+	if(!node.getParam("/calibrate", calibrate_mode)) 
 		ROS_INFO("Fail to get calibration mode,use \"true\" instead of \"1\".");
 
 	if(calibrate_mode){
@@ -287,7 +294,9 @@ int main(int argc, char* argv[])
 		threshold_setting_subscriber =
 			node.subscribe("calibration/threshold_setting", 10, threshold_setting_callback);
 		save_yaml_srv = 
-			node.advertiseService("/xenobot/save_yaml_parameter", save_yaml_parameter);
+			node.advertiseService("save_yaml_parameter", save_yaml_parameter);
+		send_hsv_srv =
+			node.advertiseService("send_hsv_threshold", send_hsv_threshold);
 	}
 
 	wheel_command_subscriber =
@@ -304,6 +313,7 @@ int main(int argc, char* argv[])
 		ROS_INFO("Abort: failed to open pi camera!");
 		return 0;
 	}
+
 
 	/* Threads */
 	thread self_driving_thread(self_driving_thread_handler);

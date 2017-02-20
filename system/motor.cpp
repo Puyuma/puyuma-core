@@ -75,7 +75,7 @@ void halt_motor()
 	pid_halt();
 }
 
-void forward_motor()
+void forward_motor(int right, int left)
 {
-	set_motor_pwm((int8_t)30, (int8_t)30);
+	set_motor_pwm((int8_t) right, (int8_t) left);
 }
