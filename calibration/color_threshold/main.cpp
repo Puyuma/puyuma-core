@@ -46,8 +46,8 @@ void create_trackbars()
 	namedWindow(window_name, WINDOW_AUTOSIZE);
 
 	//create trackbars and insert them into window
-	createTrackbar("H_MIN",window_name,&(hsv.h_min),255,on_trackbar,this);
-	createTrackbar("H_MAX",window_name,&(hsv.h_max),255,on_trackbar,this);
+	createTrackbar("H_MIN",window_name,&(hsv.h_min),180,on_trackbar,this);
+	createTrackbar("H_MAX",window_name,&(hsv.h_max),180,on_trackbar,this);
 	createTrackbar("S_MIN",window_name,&(hsv.s_min),255,on_trackbar,this);
 	createTrackbar("S_MAX",window_name,&(hsv.s_max),255,on_trackbar,this);
 	createTrackbar("V_MIN",window_name,&(hsv.v_min),255,on_trackbar,this);
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 	srv.request.color = color_calibration.color;
 
 	if(send_hsv_srv.call(srv)) {
-		ROS_INFO("Get %c hsv threshold",color_calibration.title);
+		ROS_INFO("Get %s hsv threshold",color_calibration.title);
 		color_calibration.hsv.set_hsv(
 			srv.response.h_min,srv.response.h_max,
 			srv.response.s_min,srv.response.h_min,
