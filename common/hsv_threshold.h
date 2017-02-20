@@ -13,7 +13,7 @@ class HsvThreshold {
 
 	//constructor using default value 
 	HsvThreshold():
-	h_min(0),h_max(255),s_min(0),s_max(255),v_min(0),v_max(255){}
+	h_min(0),h_max(180),s_min(0),s_max(255),v_min(0),v_max(255){}
 
     void set_hsv(int h_min,int h_max, int s_min,int s_max, int v_min, int v_max)
     {

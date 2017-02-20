@@ -81,7 +81,7 @@ void TurnRange::set_range_intersection(Direction direction, int forwarding, int 
 }
 
 LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
-	outer_threshold(0,255,0,255,0,255),inner_threshold(0,255,0,255,0,255),
+	outer_threshold(0,180,0,255,0,255),inner_threshold(0,180,0,255,0,255),
 	mode(SELF_DRIVING_MODE), direction(STRAIGHT), forwarding(0),
 	success_estimate(0)
 {
@@ -850,6 +850,14 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
 	cv::bitwise_and(red_threshold_image, canny_image, red_bitwise_and_image);
 
+	send_visualize_image(
+		raw_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		red_threshold_image
+	);
+
 	/* Hough transform */
 	vector<Vec4f> outer_cv_lines, inner_cv_lines, red_cv_lines;
 	cv::HoughLinesP(outer_bitwise_and_image, outer_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);
@@ -861,13 +869,13 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
 	segments_side_recognize(red_cv_lines, red_xeno_lines, red_threshold_image);
 
-	send_visualize_image(
+/*	send_visualize_image(
 		raw_image,
 		canny_image,
 		outer_threshold_image,
 		inner_threshold_image,
 		red_threshold_image
-	);
+	);*/
 
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
 
