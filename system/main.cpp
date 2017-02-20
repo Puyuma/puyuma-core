@@ -130,6 +130,7 @@ void load_yaml_parameter()
 		lane_detector = new LaneDetector(yaml_path + machine_name + "/", true);
 	} else {
 		lane_detector = new LaneDetector(yaml_path + machine_name + "/", false);
+		ROS_INFO("Calibration mode is disabled");
 	}
 
 	string test = yaml_path + machine_name + "/";
@@ -216,16 +217,16 @@ void self_driving_thread_handler()
 #endif
 
 		/* PID controller */
-		        if(mode == SELF_DRIVING_MODE) {
-            if(get_pose == true)
-                self_driving_controller(d, phi);
-            else
-                forward_motor(30, 30);
-        }
-        else if(mode == INTERSECTION) {
-            intersection_controller(direction, get_pose, d, phi);
-            lane_detector->forwarding++;
-        }
+		if(mode == SELF_DRIVING_MODE) {
+			if(get_pose == true) {
+				self_driving_controller(d, phi);
+			} else {
+				forward_motor(0, 0);
+			}
+		} else if(mode == INTERSECTION) {
+			intersection_controller(direction, get_pose, d, phi);
+			lane_detector->forwarding++;
+		}
 
 		std::this_thread::yield();
 	}

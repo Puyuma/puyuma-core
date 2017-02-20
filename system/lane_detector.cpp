@@ -94,10 +94,12 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 
 	ros::NodeHandle node;
 
+        marked_image_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 10);
 
 	if(calibrate_mode == true) {
-			raw_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/distort_image", 10);
+		raw_img_publisher =
+		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 10);
 
         	outer_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 10);
