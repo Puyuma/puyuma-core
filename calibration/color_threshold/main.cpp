@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 	srv.request.color = color_calibration.color;
 
 	if(send_hsv_srv.call(srv)) {
-		ROS_INFO("Get %s hsv threshold",color_calibration.title);
+		ROS_INFO("Get %s hsv threshold",color_calibration.title.c_str());
 		color_calibration.hsv.set_hsv(
 			srv.response.h_min,srv.response.h_max,
 			srv.response.s_min,srv.response.h_min,
