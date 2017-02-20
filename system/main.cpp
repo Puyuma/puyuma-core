@@ -33,7 +33,8 @@ bool joystick_triggered;
 ros::Time joystick_trigger_time;
 
 //JOYSTICK_MODE, SELF_DRIVING_MODE, STOP_MODE
-int mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+ControllerMode mode = SELF_DRIVING_MODE; //JOYSTICK_MODE
+Direction direction;
 bool calibrate_mode = false;
 
 ros::Publisher raw_image_publisher;
@@ -215,12 +216,16 @@ void self_driving_thread_handler()
 #endif
 
 		/* PID controller */
-		if(get_pose == true) {
-			self_driving_controller(d, phi);
-		} else {
-			forward_motor();
-			//halt_motor();
-		}
+		        if(mode == SELF_DRIVING_MODE) {
+            if(get_pose == true)
+                self_driving_controller(d, phi);
+            else
+                forward_motor(30, 30);
+        }
+        else if(mode == INTERSECTION) {
+            intersection_controller(direction, get_pose, d, phi);
+            lane_detector->forwarding++;
+        }
 
 		std::this_thread::yield();
 	}
@@ -253,8 +258,6 @@ void apriltags_detector_handler()
         }
 
         cout << "Motor mode: " << mode << "\n";
-
-
 
         std::this_thread::yield();
     }
@@ -310,6 +313,7 @@ int main(int argc, char* argv[])
 		ROS_INFO("Abort: failed to open pi camera!");
 		return 0;
 	}
+
 
 	/* Threads */
 	thread self_driving_thread(self_driving_thread_handler);

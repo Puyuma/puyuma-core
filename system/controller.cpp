@@ -124,3 +124,36 @@ void self_driving_controller(float d, float phi)
 
 	set_motor_pwm(pwm_left, pwm_right);
 }
+
+void intersection_controller(Direction direction, bool get_pose, float d, float phi)
+{
+	switch(direction) {
+		case 0:
+			if(get_pose == true)
+				self_driving_controller(d, phi);
+			else
+				forward_motor(30, 30);
+			break;
+
+		case 1:
+			if(get_pose == true)
+				self_driving_controller(d, phi);
+			else
+				forward_motor(30, 45);
+			break;
+
+		case 2:
+			if(get_pose == true)
+				self_driving_controller(d, phi);
+			else
+				forward_motor(55,45);
+			break;
+
+		default:
+			if(get_pose == true)
+				self_driving_controller(d, phi);
+			else
+				forward_motor(30, 30);
+			break;
+	}
+}

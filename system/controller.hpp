@@ -10,9 +10,17 @@
 using namespace std;
 
 enum ControllerMode {
-	JOYSTICK_MODE,
+	STOP_MODE,
 	SELF_DRIVING_MODE,
-	STOP_MODE
+	PRE_INTERSECTION,
+	INTERSECTION,
+	JOYSTICK_MODE
+};
+
+enum Direction {
+	STRAIGHT,
+	RIGHT,
+	LEFT
 };
 
 typedef struct {
@@ -30,6 +38,7 @@ typedef struct {
 bool load_pid_param(string _yaml_path);
 void self_driving_controller(float d, float phi);
 void pid_halt();
+void intersection_controller(enum Direction direction, bool get_pose, float d, float phi);
 
 void bound(int min, int max, int& x);
 
