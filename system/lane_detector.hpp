@@ -92,7 +92,6 @@ class TurnRange {
 	float phi_low_bound;
 	float d_up_bound;
 	float d_low_bound;
-
 };
 
 class LaneDetector {
@@ -122,8 +121,8 @@ class LaneDetector {
 	enum Direction direction;
 
 	ros::Publisher raw_img_publisher;
-    ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
-    ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
+	ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
+	ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
 	ros::Publisher red_threshold_img_publisher;
 	ros::Publisher canny_img_publisher;
 	ros::Publisher marked_image_publisher;
@@ -143,54 +142,46 @@ class LaneDetector {
 	void segment_homography_transform(vector<segment_t>& lines);
 	void segments_side_recognize(vector<Vec4f>& cv_segments,
 		vector<segment_t>& xeno_segments, cv::Mat& threshold_image);
-	bool generate_vote(segment_t& lane_segment, float& d, float& phi, int color);
 
 	/* Visualization */
 	void mark_lane(cv::Mat& lane_mark_image, vector<segment_t>& lines,
 		Scalar line_color, Scalar dot_color, Scalar text_color);
-	void publish_images(
-		cv::Mat& distorted_image, cv::Mat& canny_image, cv::Mat& outer_threshold_image,cv::Mat& inner_threshold_image, cv::Mat& red_threshold_image, cv::Mat& bird_view_image);
 	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
 	void draw_bird_view_image(cv::Mat& original_image, cv::Mat& bird_view_image);
 	void draw_region_of_interest(cv::Mat lane_mark_image);
-
 	void check_cross_intersection(int, int);
-
 	void send_lanemark_image_thread(int case_type);
-
 	void send_visualize_image_thread(
 		cv::Mat distorted_image, cv::Mat canny_image,
 		cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,cv::Mat red_threshold_image);
-
 	void send_lanemark_image(int case_type);
+	void send_visualize_image(cv::Mat& distorted_image, cv::Mat& canny_image, cv::Mat& outer_threshold_image,
+		cv::Mat& inner_threshold_image, cv::Mat& red_threshold_image);
+	void publish_images(
+		cv::Mat& distorted_image, cv::Mat& canny_image, cv::Mat& outer_threshold_image,
+		cv::Mat& inner_threshold_image, cv::Mat& red_threshold_image, cv::Mat& bird_view_image);
 
-	void send_visualize_image(cv::Mat& distorted_image, cv::Mat& canny_image,cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image, cv::Mat& red_threshold_image);
 
-
-	//lane estimate
-	bool get_lines_from_raw(cv::Mat& raw_image, vector<segment_t>& outer_xeno_line,
-			 vector<segment_t>& inner_xeno_line);
-
-	bool find_highest_vote(vector<segment_t>& outer_xeno_lines, vector<segment_t>& inner_xeno_lines,int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg);
-
-	bool get_final_data(vector<segment_t> outer_xeno_lines, vector<segment_t> inner_xeno_line,
-            int& highest_vote_i, int& highest_vote_j, float& final_phi, float& fianl_d);
+	/* lane estimation */
+	bool image_preprocess(cv::Mat& raw_image, vector<segment_t>& outer_xeno_line,
+		vector<segment_t>& inner_xeno_line);
+	bool generate_vote(segment_t& lane_segment, float& d, float& phi, int color);
+	bool find_highest_vote(vector<segment_t>& outer_xeno_lines, vector<segment_t>& inner_xeno_lines,
+		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg);
+	bool histogram_filter(vector<segment_t> outer_xeno_lines, vector<segment_t> inner_xeno_line,
+		int& highest_vote_i, int& highest_vote_j, float& final_phi, float& fianl_d);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);
-
 	bool lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi);
-
-
 	void set_mode(enum ControllerMode mode);
 	void set_direction(enum Direction direction);
-
-	//hsv setting relate function
-    bool set_hsv(char color,int h_min,int h_max,int s_min,int s_max,int v_min,int v_max);
-    bool save_thresholding_yaml();
-    bool load_yaml_setting();
-    void send_hsv(char color,xenobot::SendHsv::Response &res);
-    HsvThreshold* get_threshold(char color);	
+	/* HSV parameter setting */
+	bool set_hsv(char color,int h_min,int h_max,int s_min,int s_max,int v_min,int v_max);
+	bool save_thresholding_yaml();
+	bool load_yaml_setting();
+	void send_hsv(char color,xenobot::SendHsv::Response &res);
+	HsvThreshold* get_threshold(char color);	
 
 	int forwarding;
 };

@@ -33,16 +33,15 @@ TurnRange::TurnRange() :
 
 void TurnRange::set_range_self(int highest_vote_i, int highest_vote_j)
 {
-    /* Convert i, j to most possible phi and d range */
+	/* Convert i, j to most possible phi and d range */
 	predicted_phi = DELTA_PHI * highest_vote_i + PHI_MIN;
 	predicted_d = DELTA_D * highest_vote_j + D_MIN;
 
-    /* phi and d should in the range of predicted value +- delta/2 */
+	/* phi and d should in the range of predicted value +- delta/2 */
 	phi_up_bound = predicted_phi + DELTA_PHI / 2;
 	phi_low_bound = predicted_phi - DELTA_PHI / 2;
 	d_up_bound = predicted_d + DELTA_D / 2;
 	d_low_bound = predicted_d - DELTA_D / 2;
-
 }
 
 void TurnRange::set_range_intersection(Direction direction, int forwarding, int highest_vote_i, int highest_vote_j)
@@ -81,8 +80,11 @@ void TurnRange::set_range_intersection(Direction direction, int forwarding, int 
 }
 
 LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
-	outer_threshold(0,180,0,255,0,255),inner_threshold(0,180,0,255,0,255),
-	mode(SELF_DRIVING_MODE), direction(STRAIGHT), forwarding(0),
+	outer_threshold(0 , 180, 0, 255, 0, 255),
+	inner_threshold(0, 180, 0,255 ,0 , 255),
+	mode(SELF_DRIVING_MODE),
+	direction(STRAIGHT),
+	forwarding(0),
 	success_estimate(0)
 {
 	this->calibrate_mode = calibrate_mode;
@@ -156,33 +158,33 @@ void LaneDetector::publish_images(
 	bird_view_img_publisher.publish(img_msg);
 }
 
-bool LaneDetector::set_hsv(
-    char color,int h_min,int h_max,
-    int s_min,int s_max,int v_min,int v_max)
+bool LaneDetector::set_hsv(char color, int h_min, int h_max,
+	int s_min,int s_max, int v_min, int v_max)
 {
     HsvThreshold* threshold = get_threshold(color);
 
-    threshold->set_hsv(h_min,h_max,s_min,s_max,v_min,v_max);
+    threshold->set_hsv(h_min, h_max, s_min, s_max, v_min, v_max);
 }
 
-HsvThreshold* LaneDetector::get_threshold(char color) {
+HsvThreshold* LaneDetector::get_threshold(char color)
+{
     switch (color){
         case 'w': return &outer_threshold;
         case 'y': return &inner_threshold;
-		case 'r': return &red_threshold;
+	case 'r': return &red_threshold;
         default: ROS_ERROR("Undefined color code :'%c'",color);
     }
 }
 
 void LaneDetector::send_hsv(char color,xenobot::SendHsv::Response &res)
 {
-    HsvThreshold* threshold = get_threshold(color);
-    res.h_min = threshold->h_min;
-    res.h_max = threshold->h_max;
-    res.s_min = threshold->s_min;
-    res.s_max = threshold->s_max;
-    res.v_min = threshold->v_min;
-    res.v_max = threshold->v_max;
+	HsvThreshold* threshold = get_threshold(color);
+	res.h_min = threshold->h_min;
+	res.h_max = threshold->h_max;
+	res.s_min = threshold->s_min;
+	res.s_max = threshold->s_max;
+	res.v_min = threshold->v_min;
+	res.v_max = threshold->v_max;
 }
 
 void LaneDetector::set_mode(ControllerMode mode)
@@ -307,11 +309,11 @@ bool LaneDetector::save_thresholding_yaml()
 
 	if(fp) {
 		fp << out.c_str() << endl; //Write yaml
-		ROS_INFO("Saved the thresholding setting to %s",file_path.c_str());
+		ROS_INFO("Saved threshold setting to %s",file_path.c_str());
 		cout << out.c_str() << endl;
 		return true;
 	} else {
-		ROS_ERROR("Failed to save the thresholding setting to %s",file_path.c_str());
+		ROS_ERROR("Failed to save threshold setting to %s",file_path.c_str());
 		return false;
 	}
 }
@@ -364,7 +366,6 @@ void LaneDetector::gnd_to_image(float& pixel_x, float& pixel_y, float& gnd_x, fl
  * Check the hough transformed line is at the right or left edge of the lane
  * Return false if the result is undetermined
  */
-
 bool LaneDetector::single_edge_recognize(cv::Mat& threshold_image, segment_t& lane_segment)
 {
 	/*
@@ -546,12 +547,21 @@ void LaneDetector::find_region_of_interest(cv::Mat& original_image, cv::Mat& roi
 
 void LaneDetector::draw_region_of_interest(cv::Mat lane_mark_image)
 {
-	Point2f p1, p2, p3, p4;
+	Point2f p1;
+	p1.x = 0;
+	p1.y = roi_offset_y;
 
-	p1.x = 0;			p1.y = roi_offset_y;
-	p2.x = IMAGE_WIDTH;	p2.y = roi_offset_y;
-	p3.x = IMAGE_WIDTH;	p3.y = IMAGE_HEIGHT;
-	p4.x = 0;			p4.y = IMAGE_HEIGHT;
+	Point2f p2;
+	p2.x = IMAGE_WIDTH;
+	p2.y = roi_offset_y;
+
+	Point2f p3;
+	p3.x = IMAGE_WIDTH;
+	p3.y = IMAGE_HEIGHT;
+
+	Point2f p4;
+	p4.x = 0;
+	p4.y = IMAGE_HEIGHT;
 
 #if 0
 	if(mode == SELF_DRIVING_MODE) {
@@ -631,8 +641,10 @@ void LaneDetector::segment_homography_transform(vector<segment_t>& lines)
 
 void LaneDetector::check_cross_intersection(int final_d, int final_phi)
 {
-	if(final_phi < 10 && final_phi > -10 && final_d < 10 && final_d > -10)
+	if(final_phi < 10 && final_phi > -10 && final_d < 10 && final_d > -10) {
 		success_estimate += 1;
+	}
+
 	if(success_estimate >= 5) {
 		mode = SELF_DRIVING_MODE;
 		cout << "\033[1;31mChange intersection mode to\033[0m " << mode << "\n";
@@ -645,8 +657,9 @@ void LaneDetector::send_lanemark_image_thread(int case_type)
 	string text;
 
 	switch(case_type) {
-		case 3: {
-			//Publish pose
+		case 3:
+		{
+			/* Pose */
 			std_msgs::Float32 pose_msg;
 			pose_msg.data = d;
 			pose_d_publisher.publish(pose_msg);
@@ -656,6 +669,7 @@ void LaneDetector::send_lanemark_image_thread(int case_type)
 			ROS_INFO("phi:%f | d:%f", phi, d);
 		}
 		case 2:
+		{
 			/* Lane mark image */
 			mark_lane(lane_mark_image, outer_xeno_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 			mark_lane(lane_mark_image, inner_xeno_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
@@ -663,8 +677,9 @@ void LaneDetector::send_lanemark_image_thread(int case_type)
 			draw_segment_side(lane_mark_image, outer_xeno_lines);
 			draw_segment_side(lane_mark_image, inner_xeno_lines);
 
-			//Publish segments
+			/* Publish segments */
 			histogram_publisher.publish(segments_msg);
+		}
 	}
 
 	/* Draw car status */
@@ -677,18 +692,17 @@ void LaneDetector::send_lanemark_image_thread(int case_type)
 		sprintf(status_text, "d=%.1fcm,phi=%.1fdegree", d, phi);
 
 		putText(lane_mark_image, status_text, Point(10, 40),
-		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
-	} else
+			FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
+	} else {
 		putText(lane_mark_image, "Failed to estimate the lane", Point(10, 15),
-		FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 0, 255));
-
+			FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 0, 255));
+	}
 
 	draw_region_of_interest(lane_mark_image);
 
 	//Publish lanemark image
 	sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", lane_mark_image).toImageMsg();
-    marked_image_publisher.publish(img_msg);
-
+	marked_image_publisher.publish(img_msg);
 }
 
 void LaneDetector::send_visualize_image_thread(
@@ -712,12 +726,13 @@ void LaneDetector::send_visualize_image_thread(
 
 void LaneDetector::send_lanemark_image(int case_type)
 {
-	if(!calibrate_mode)
+	if(calibrate_mode == false) {
 		return;
+	}
 
 	thread send_image_thread(
 		&LaneDetector::send_lanemark_image_thread,
-		this,case_type
+		this, case_type
 	);
 
 	send_image_thread.detach();
@@ -729,8 +744,9 @@ void LaneDetector::send_visualize_image(
 	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
 	cv::Mat& red_threshold_image)
 {
-	if(!calibrate_mode)
+	if(calibrate_mode == false) {
 		return;
+	}
 
 	thread send_image_thread(
 		&LaneDetector::send_visualize_image_thread,
@@ -745,7 +761,7 @@ void LaneDetector::send_visualize_image(
 	send_image_thread.detach();
 }
 
-bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& final_phi)
+bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_phi)
 {
 	//Cleanup data
 	outer_xeno_lines.clear();
@@ -755,37 +771,36 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 
 	this->raw_image = raw_image;
 
-	if(get_lines_from_raw(raw_image, outer_xeno_lines, inner_xeno_lines) == false) {
+	if(image_preprocess(raw_image, outer_xeno_lines, inner_xeno_lines) == false) {
 		send_lanemark_image(1);
 		return false;
 	}
 
 	int highest_vote_i = 0, highest_vote_j = 0;
 
-	if(find_highest_vote(outer_xeno_lines, inner_xeno_lines, highest_vote_i, highest_vote_j,
-			segments_msg) == false) {
+	if(find_highest_vote(outer_xeno_lines, inner_xeno_lines, highest_vote_i, highest_vote_j, segments_msg) == false) {
 		send_lanemark_image(2);
 		return false;
 	}
 
-	if(get_final_data(outer_xeno_lines, inner_xeno_lines, highest_vote_i
-			, highest_vote_j, final_phi, final_d) == false) {
+	if(histogram_filter(outer_xeno_lines, inner_xeno_lines, highest_vote_i, highest_vote_j, pose_phi, pose_d) == false) {
 		send_lanemark_image(2);
 		return false;
 	}
 
-	this->d = final_d;
-	this->phi = final_phi;
+	this->d = pose_d;
+	this->phi = pose_phi;
 
 #if 0
-	if(mode == INTERSECTION)
+	if(mode == INTERSECTION) {
 		check_cross_intersection(final_d, final_phi);
+	}
 #endif
 
 	//ROS message
 	xenobot::segment segment;
-	segment.d = final_d;
-	segment.phi = final_phi;
+	segment.d = pose_d;
+	segment.phi = pose_phi;
 	segment.color = 2; //RED
 	segments_msg.segments.push_back(segment);
 
@@ -794,7 +809,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	return true;
 }
 
-bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& outer_xeno_lines,vector<segment_t>& inner_xeno_lines)
+bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_xeno_lines,vector<segment_t>& inner_xeno_lines)
 {
 	cv::Mat outer_hsv_image, outer_threshold_image;
 	cv::Mat inner_hsv_image, inner_threshold_image;
@@ -812,34 +827,33 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 	cv::cvtColor(roi_image, red_hsv_image, COLOR_BGR2HSV);
 
 	/* Binarization (Color thresholding) */
-    cv::inRange(
-        outer_hsv_image,
-        Scalar(outer_threshold.h_min, outer_threshold.s_min, outer_threshold.v_min),
-        Scalar(outer_threshold.h_max, outer_threshold.s_max, outer_threshold.v_max),
-        outer_threshold_image
-    );
-
-    cv::inRange(
-        inner_hsv_image,
-        Scalar(inner_threshold.h_min, inner_threshold.s_min, inner_threshold.v_min),
-        Scalar(inner_threshold.h_max, inner_threshold.s_max, inner_threshold.v_max),
-        inner_threshold_image
-    );
+	cv::inRange(
+		outer_hsv_image,
+		Scalar(outer_threshold.h_min, outer_threshold.s_min, outer_threshold.v_min),
+		Scalar(outer_threshold.h_max, outer_threshold.s_max, outer_threshold.v_max),
+		outer_threshold_image
+	);
 
 	cv::inRange(
-        red_hsv_image,
-        Scalar(red_threshold.h_min, red_threshold.s_min, red_threshold.v_min),
-        Scalar(red_threshold.h_max, red_threshold.s_max, red_threshold.v_max),
-        red_threshold_image
-    );
+		inner_hsv_image,
+		Scalar(inner_threshold.h_min, inner_threshold.s_min, inner_threshold.v_min),
+		Scalar(inner_threshold.h_max, inner_threshold.s_max, inner_threshold.v_max),
+		inner_threshold_image
+	);
+
+	cv::inRange(
+		red_hsv_image,
+		Scalar(red_threshold.h_min, red_threshold.s_min, red_threshold.v_min),
+		Scalar(red_threshold.h_max, red_threshold.s_max, red_threshold.v_max),
+		red_threshold_image
+	);
 
 	/* Canny */
 	cv::Mat gray_image;
 	cv::Mat preprocess_canny_image;
 
 	cv::cvtColor(roi_image, gray_image, CV_BGR2GRAY);
-	cv::Canny(gray_image, preprocess_canny_image, CANNY_THRESHOLD_1,
-		CANNY_THRESHOLD_2, 3);
+	cv::Canny(gray_image, preprocess_canny_image, CANNY_THRESHOLD_1, CANNY_THRESHOLD_2, 3);
 
 	/* Deliation */
 	Mat deliation_element = cv::getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
@@ -871,18 +885,8 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
 	segments_side_recognize(red_cv_lines, red_xeno_lines, red_threshold_image);
 
-/*	send_visualize_image(
-		raw_image,
-		canny_image,
-		outer_threshold_image,
-		inner_threshold_image,
-		red_threshold_image
-	);*/
-
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
-
 		ROS_INFO("Failed to estimate the lane [No segment found]");
-
 		return false;
 	}
 
@@ -892,10 +896,8 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector<segment_t>& inner_xeno_lines,
 		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg)
 {
-
 	int vote_count = 0;
 	xenobot::segment segment;
-
 
 	/*Perspective transformation */
 	segment_homography_transform(outer_xeno_lines);
@@ -925,14 +927,13 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector
 			outer_xeno_lines.erase(outer_xeno_lines.begin() + i);
 			i--;
 			continue;
-		}
-        else if(mode == SELF_DRIVING_MODE) {
-            if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-                outer_xeno_lines.erase(outer_xeno_lines.begin() + i) ;
+		} else if(mode == SELF_DRIVING_MODE) {
+            		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+                		outer_xeno_lines.erase(outer_xeno_lines.begin() + i) ;
 				i--;
-                continue;
-            }
-        }
+                		continue;
+            		}
+        	}
 
 		vote_count++;
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
@@ -956,12 +957,10 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector
 		inner_xeno_lines.at(i).d = d_i;
 		inner_xeno_lines.at(i).phi = phi_i;
 
-
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
 		int _j = (int)round((d_i - D_MIN) / DELTA_D);
 	
-
 		//Drop the vote if it is out of the boundary
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
 			inner_xeno_lines.erase(inner_xeno_lines.begin() + i) ;
@@ -992,7 +991,6 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector
 	}
 
 	if(vote_box[highest_vote_i][highest_vote_j] < HISTOGRAM_FILTER_THRESHOLD) {
-
 		ROS_INFO("Failed to estimate the lane [Less than threshold value]");
 		return false;
 	}
@@ -1000,14 +998,15 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector
 	return true;
 }
 
-bool LaneDetector::get_final_data(vector<segment_t> outer_xeno_lines, vector<segment_t> inner_xeno_lines,int& highest_vote_i,int& highest_vote_j, float& final_phi, float& final_d)
+bool LaneDetector::histogram_filter(vector<segment_t> outer_xeno_lines, vector<segment_t> inner_xeno_lines,
+	int& highest_vote_i,int& highest_vote_j, float& final_phi, float& final_d)
 {
 
 	/*According to mode and direction set the turn information*/
 	TurnRange turnrange;
-	if(mode == SELF_DRIVING_MODE)
+	if(mode == SELF_DRIVING_MODE) {
 		turnrange.set_range_self(highest_vote_i, highest_vote_j);
-	else if(mode == INTERSECTION) {
+	} else if(mode == INTERSECTION) {
 		turnrange.set_range_intersection(direction, forwarding, highest_vote_i, highest_vote_j);
 	}
 
@@ -1048,7 +1047,6 @@ bool LaneDetector::get_final_data(vector<segment_t> outer_xeno_lines, vector<seg
 	}
 
 	if(phi_sample_cnt == 0 || d_sample_cnt == 0) {
-
 		ROS_INFO("Failed to estimate the lane [Sample count equals zero]");
 		return false;
 	}

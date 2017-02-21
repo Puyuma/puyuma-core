@@ -27,7 +27,6 @@ using namespace cv;
 LaneDetector* lane_detector;
 cv::Mat camera_matrix, distort_coffecient;
 
-
 //Joystick
 bool joystick_triggered;
 ros::Time joystick_trigger_time;
@@ -43,6 +42,7 @@ ros::Subscriber threshold_setting_subscriber;
 ros::Subscriber wheel_command_subscriber;
 ros::ServiceServer save_yaml_srv;
 ros::ServiceServer send_hsv_srv;
+
 /* Camera */
 raspicam::RaspiCam_Cv camera;
 Queue<cv::Mat> raw_image_queue;
@@ -83,13 +83,11 @@ void wheel_command_callback(const xenobot::wheel_command& wheel_msg)
 bool save_yaml_parameter(std_srvs::Trigger::Request &req,std_srvs::Trigger::Response &res)
 {
 	bool result = lane_detector->save_thresholding_yaml();
-	if(result == true)
-	{
+	if(result == true) {
 		res.success = true;
 		res.message = "Yaml_parameter saved";
 		return true;
-	}
-	else{
+	} else{
 		res.success = false;
 		res.message = "Fail to save yaml_parameter";
 		return false;
@@ -98,7 +96,7 @@ bool save_yaml_parameter(std_srvs::Trigger::Request &req,std_srvs::Trigger::Resp
 
 bool send_hsv_threshold(xenobot::SendHsv::Request &req,xenobot::SendHsv::Response &res)
 {
-    //bool result = lane_detector->save_thresholding_yaml();
+	//bool result = lane_detector->save_thresholding_yaml();
 	char color = req.color;
 	lane_detector->send_hsv(color,res);
 	return true;
@@ -123,7 +121,6 @@ void load_yaml_parameter()
 		ROS_INFO("Instead of doing rosrun command, you should try roslaunch command");
 		return;
 	}
-
 
 	if(calibrate_mode == true) {
 		ROS_INFO("Calibration mode is enabled");
@@ -155,7 +152,6 @@ void load_yaml_parameter()
 	if(load_pid_param(yaml_path + machine_name + "/") == false) {
 		ROS_INFO("PID parameter is not exist, load the default setting!");
 	}
-
 }
 
 void camera_thread_handler()
@@ -177,7 +173,6 @@ void self_driving_thread_handler()
 	cv::Mat frame;
 
 	while(1) {
-
 		if(mode == STOP_MODE){
 			halt_motor();
 			std::this_thread::yield();
@@ -235,34 +230,36 @@ void self_driving_thread_handler()
 
 void apriltags_detector_handler()
 {
-    ApriltagsDetector detector;
-    int apriltags_id;
+	ApriltagsDetector detector;
+	int apriltags_id;
 
-    cv::Mat image;
-    cv::Mat image_gray;
+	cv::Mat image;
+	cv::Mat image_gray;
 
-    while(1)
-    {
+	while(1)
+	{
+		raw_image_queue.front(image);
+		apriltags_id = detector.processImage(image, image_gray);
 
-        raw_image_queue.front(image);
-        apriltags_id = detector.processImage(image, image_gray);
+		switch(apriltags_id) {
+			case 0:
+			{
+				mode = STOP_MODE;
+				break;
+			}
+			default:
+			{
+                		mode = SELF_DRIVING_MODE;
+                		break;
+			}
+        	}
 
-        switch(apriltags_id)
-        {
-            case 0:
-                mode = STOP_MODE;
-                break;
+		cout << "Motor mode: " << mode << "\n";
 
-            default:
-                mode = SELF_DRIVING_MODE;
-                break;
-        }
+		std::this_thread::yield();
+	}
 
-        cout << "Motor mode: " << mode << "\n";
-
-        std::this_thread::yield();
-    }
-    cv::waitKey(1);
+	cv::waitKey(1);
 }
 
 
@@ -303,7 +300,6 @@ int main(int argc, char* argv[])
 	wheel_command_subscriber =
 		node.subscribe("wheel_command", 1, wheel_command_callback);
 
-
 	load_yaml_parameter();
 
 	/* Motor initialization */
@@ -314,7 +310,6 @@ int main(int argc, char* argv[])
 		ROS_INFO("Abort: failed to open pi camera!");
 		return 0;
 	}
-
 
 	/* Threads */
 	thread self_driving_thread(self_driving_thread_handler);
