@@ -14,6 +14,15 @@ Our goal is to build a low cost self-driving car based on realtime Linux (patche
 
 Connecting to your raspberry pi using ssh then follow the instructions.
 
+###0.Install dependency
+
+```
+#Install ROS kinetic ,or indigo
+http://wiki.ros.org/kinetic/Installation/Ubuntu
+
+sudo apt install libncurse5-dev libopencv-dev ros-ROS_DISTRO-cv-bridge
+```
+
 ###1.Raspicam
 
 ```
@@ -33,7 +42,16 @@ cd WiringPi
 ./build
 ```
 
-###3.Xenobot
+###3.Apriltags_cpp
+
+```
+cd $(YOUR_CATKIN_WS)/src
+git clone https://github.com/ncku-ros2-research/apriltags
+cd $(YOUR_CATKIN_WS)
+catkin_make
+```
+
+###4.Xenobot
 
 ```
 cd $(YOUR_CATKIN_WS)/src
@@ -67,7 +85,9 @@ roslaunch xenobot extrinsic_calibration.launch veh:=machine_name
 ```
 pi$ roslaunch xenobot activate_controller.launch veh:=machine_name cal:=true
 
-pc$ rosrun xenobot color_threshold_calibration _color:=[yellow | white | both]
+pc$ rosrun xenobot color_threshold_calibration _color:=[ 1 | 2 | 3 ]
+
+//[1: yellow | 2: white | 3: both]
 ```
 * inner == yellow
 * outer == white
@@ -86,7 +106,7 @@ Add:
 . /opt/ros/kinetic/setup.bash
 . ~/catkin_ws/devel/setup.bash
 export ROS_IP=`hostname -I`
-alias play="roslaunch xenobot activate_controller.launch veh:=colin calibrate:=1"
+alias play="roslaunch xenobot activate_controller.launch veh:=VEHICLE_NAME calibrate:=true"
 alias stop=". ~/catkin_ws/src/xenobot/halt_motor.sh"
 ```
 
