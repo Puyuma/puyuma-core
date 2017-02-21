@@ -99,11 +99,15 @@ class LaneDetector {
 	private:
 	string yaml_path;
 
+	vector<string> color_title = {"outer", "inner", "red"};
+	const char color_char[3] = {'w', 'y', 'r'};
+
 	HsvThreshold inner_threshold;
 	HsvThreshold outer_threshold;
+	HsvThreshold red_threshold;
 
 	cv::Mat raw_image;
-	vector<segment_t> outer_xeno_lines, inner_xeno_lines;
+	vector<segment_t> outer_xeno_lines, inner_xeno_lines, red_xeno_lines;
 	double d, phi;
 	xenobot::segmentArray segments_msg;
 
@@ -120,6 +124,7 @@ class LaneDetector {
 	ros::Publisher raw_img_publisher;
     ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
     ros::Publisher inner_threshold_img_publisher, inner_hough_img_publisher;
+	ros::Publisher red_threshold_img_publisher;
 	ros::Publisher canny_img_publisher;
 	ros::Publisher marked_image_publisher;
 	ros::Publisher bird_view_img_publisher;
@@ -144,8 +149,7 @@ class LaneDetector {
 	void mark_lane(cv::Mat& lane_mark_image, vector<segment_t>& lines,
 		Scalar line_color, Scalar dot_color, Scalar text_color);
 	void publish_images(
-		cv::Mat& distorted_image, cv::Mat& canny_image, cv::Mat& outer_threshold_image,
-		cv::Mat& inner_threshold_image, cv::Mat& bird_view_image);
+		cv::Mat& distorted_image, cv::Mat& canny_image, cv::Mat& outer_threshold_image,cv::Mat& inner_threshold_image, cv::Mat& red_threshold_image, cv::Mat& bird_view_image);
 	void draw_segment_side(cv::Mat& lane_mark_image, vector<segment_t>& xeno_segments);
 	void draw_bird_view_image(cv::Mat& original_image, cv::Mat& bird_view_image);
 	void draw_region_of_interest(cv::Mat lane_mark_image);
@@ -156,12 +160,11 @@ class LaneDetector {
 
 	void send_visualize_image_thread(
 		cv::Mat distorted_image, cv::Mat canny_image,
-		cv::Mat outer_threshold_image, cv::Mat inner_threshold_image);
+		cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,cv::Mat red_threshold_image);
 
 	void send_lanemark_image(int case_type);
 
-	void send_visualize_image(cv::Mat& distorted_image, cv::Mat& canny_image,
-		cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image);
+	void send_visualize_image(cv::Mat& distorted_image, cv::Mat& canny_image,cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image, cv::Mat& red_threshold_image);
 
 
 	//lane estimate

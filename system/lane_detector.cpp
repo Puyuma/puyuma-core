@@ -81,7 +81,7 @@ void TurnRange::set_range_intersection(Direction direction, int forwarding, int 
 }
 
 LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
-	outer_threshold(0,255,0,255,0,255),inner_threshold(0,255,0,255,0,255),
+	outer_threshold(0,180,0,255,0,255),inner_threshold(0,180,0,255,0,255),
 	mode(SELF_DRIVING_MODE), direction(STRAIGHT), forwarding(0),
 	success_estimate(0)
 {
@@ -108,6 +108,9 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
        		inner_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 10);
 
+			red_threshold_img_publisher =
+			node.advertise<sensor_msgs::Image>("xenobot/red_threshold_image", 10);
+
 	        marked_image_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 10);
 
@@ -127,7 +130,7 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 
 void LaneDetector::publish_images(
 	cv::Mat& distorted_image, cv::Mat& canny_image, cv::Mat& outer_threshold_image,
-	cv::Mat& inner_threshold_image, cv::Mat& bird_view_image)
+	cv::Mat& inner_threshold_image, cv::Mat& red_threshold_image, cv::Mat& bird_view_image)
 {
 	sensor_msgs::ImagePtr img_msg;
 
@@ -143,6 +146,9 @@ void LaneDetector::publish_images(
 
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", inner_threshold_image).toImageMsg();
 	inner_threshold_img_publisher.publish(img_msg);
+
+	img_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", red_threshold_image).toImageMsg();
+	red_threshold_img_publisher.publish(img_msg);
 
 	img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", bird_view_image).toImageMsg();
 	bird_view_img_publisher.publish(img_msg);
@@ -161,6 +167,7 @@ HsvThreshold* LaneDetector::get_threshold(char color) {
     switch (color){
         case 'w': return &outer_threshold;
         case 'y': return &inner_threshold;
+		case 'r': return &red_threshold;
         default: ROS_ERROR("Undefined color code :'%c'",color);
     }
 }
@@ -230,44 +237,32 @@ bool LaneDetector::read_extrinsic_calibration(string _yaml_path)
 
 bool LaneDetector::read_threshold_setting(string _yaml_path)
 {
-	int outer_h_max, outer_s_max, outer_v_max;
-	int outer_h_min, outer_s_min, outer_v_min;
-	int inner_h_max, inner_s_max, inner_v_max;
-	int inner_h_min, inner_s_min, inner_v_min;
+	int h_max, s_max, v_max;
+	int h_min, s_min, v_min;
 
 	try {
 		YAML::Node yaml_node = YAML::LoadFile(_yaml_path);
+		HsvThreshold* threshold;
 
-		YAML::Node outer_node = yaml_node["outer"];
+		for(int i =0;i<color_title.size();i++) {
 
-		outer_h_min = outer_node["h_min"].as<int>();
-		outer_h_max = outer_node["h_max"].as<int>();
-		outer_s_min = outer_node["s_min"].as<int>();
-		outer_s_max = outer_node["s_max"].as<int>();
-		outer_v_min = outer_node["v_min"].as<int>();
-		outer_v_max = outer_node["v_max"].as<int>();
-		
-		YAML::Node inner_node = yaml_node["inner"];
+			YAML::Node node = yaml_node[color_title[i]];
+			threshold = get_threshold(color_char[i]);
 
-		inner_h_min = inner_node["h_min"].as<int>();
-		inner_h_max = inner_node["h_max"].as<int>();
-		inner_s_min = inner_node["s_min"].as<int>();
-		inner_s_max = inner_node["s_max"].as<int>();
-		inner_v_min = inner_node["v_min"].as<int>();
-		inner_v_max = inner_node["v_max"].as<int>();
+			h_min = node["h_min"].as<int>();
+			h_max = node["h_max"].as<int>();
+			s_min = node["s_min"].as<int>();
+			s_max = node["s_max"].as<int>();
+			v_min = node["v_min"].as<int>();
+			v_max = node["v_max"].as<int>();
+
+			threshold->set_hsv(h_min, h_max, s_min, s_max, v_min, v_max);
+		}
+
 	} catch(...) {
 		ROS_ERROR("Failed to load %s", _yaml_path.c_str());
 		return false;
 	}
-
-	outer_threshold.set_hsv(
-        outer_h_min, outer_h_max,
-        outer_s_min, outer_s_max,
-        outer_v_min, outer_v_max);
-    inner_threshold.set_hsv(
-        inner_h_min, inner_h_max,
-        inner_s_min, inner_s_max,
-        inner_v_min, inner_v_max);
 
 	return true;
 }
@@ -281,28 +276,24 @@ void LaneDetector::append_yaml_data(YAML::Emitter& yaml_handler, string key, int
 bool LaneDetector::save_thresholding_yaml()
 {
 	YAML::Emitter out;
+	HsvThreshold* threshold;
 
 	out << YAML::BeginMap;
 
-	out << YAML::Key << "outer" << YAML::Value << YAML::BeginMap;
+	for(int i =0;i<color_title.size();i++) {
 
-    append_yaml_data(out, "h_min", outer_threshold.h_min);
-    append_yaml_data(out, "h_max", outer_threshold.h_max);
-    append_yaml_data(out, "s_min", outer_threshold.s_min);
-    append_yaml_data(out, "s_max", outer_threshold.s_max);
-    append_yaml_data(out, "v_min", outer_threshold.v_min);
-    append_yaml_data(out, "v_max", outer_threshold.v_max);
+		threshold = get_threshold(color_char[i]);
 
-	out << YAML::EndMap;
+		out << YAML::Key << color_title[i] << YAML::Value << YAML::BeginMap;
+		append_yaml_data(out, "h_min", threshold->h_min);
+		append_yaml_data(out, "h_max", threshold->h_max);
+		append_yaml_data(out, "s_min", threshold->s_min);
+		append_yaml_data(out, "s_max", threshold->s_max);
+		append_yaml_data(out, "v_min", threshold->v_min);
+		append_yaml_data(out, "v_max", threshold->v_max);
+		out << YAML::EndMap;
 
-	out << YAML::Key << "inner" << YAML::Value << YAML::BeginMap;	
-
-    append_yaml_data(out, "h_min", inner_threshold.h_min);
-    append_yaml_data(out, "h_max", inner_threshold.h_max);
-    append_yaml_data(out, "s_min", inner_threshold.s_min);
-    append_yaml_data(out, "s_max", inner_threshold.s_max);
-    append_yaml_data(out, "v_min", inner_threshold.v_min);
-    append_yaml_data(out, "v_max", inner_threshold.v_max);
+	}
 
 	out << YAML::EndMap << YAML::EndMap;
 
@@ -649,7 +640,7 @@ void LaneDetector::check_cross_intersection(int final_d, int final_phi)
 void LaneDetector::send_lanemark_image_thread(int case_type)
 {
 	cv::Mat lane_mark_image = raw_image.clone();
-	std::string text;
+	string text;
 
 	switch(case_type) {
 		case 3: {
@@ -666,6 +657,7 @@ void LaneDetector::send_lanemark_image_thread(int case_type)
 			/* Lane mark image */
 			mark_lane(lane_mark_image, outer_xeno_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 			mark_lane(lane_mark_image, inner_xeno_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
+			mark_lane(lane_mark_image, red_xeno_lines, Scalar(0, 255, 0), Scalar(255, 0, 255),  Scalar(0, 255, 0));
 			draw_segment_side(lane_mark_image, outer_xeno_lines);
 			draw_segment_side(lane_mark_image, inner_xeno_lines);
 
@@ -700,7 +692,8 @@ void LaneDetector::send_lanemark_image_thread(int case_type)
 void LaneDetector::send_visualize_image_thread(
 	/* Images */
 	cv::Mat distorted_image, cv::Mat canny_image,
-	cv::Mat outer_threshold_image, cv::Mat inner_threshold_image)
+	cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
+	cv::Mat red_threshold_image)
 {
 
 	/* Bird view image */
@@ -709,7 +702,7 @@ void LaneDetector::send_visualize_image_thread(
 
 	publish_images(
 		distorted_image, canny_image,
-		outer_threshold_image, inner_threshold_image,
+		outer_threshold_image, inner_threshold_image,red_threshold_image,
 		bird_view_image
 	);
 }
@@ -731,7 +724,8 @@ void LaneDetector::send_lanemark_image(int case_type)
 void LaneDetector::send_visualize_image(
 	/* Images */
 	cv::Mat& distorted_image, cv::Mat& canny_image,
-	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image)
+	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
+	cv::Mat& red_threshold_image)
 {
 	if(!calibrate_mode)
 		return;
@@ -742,7 +736,8 @@ void LaneDetector::send_visualize_image(
 		distorted_image,
 		canny_image,
 		outer_threshold_image,
-		inner_threshold_image
+		inner_threshold_image,
+		red_threshold_image
 	);
 
 	send_image_thread.detach();
@@ -753,6 +748,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	//Cleanup data
 	outer_xeno_lines.clear();
 	inner_xeno_lines.clear();
+	red_xeno_lines.clear();
 	segments_msg.segments.clear();
 
 	this->raw_image = raw_image;
@@ -800,6 +796,7 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 {
 	cv::Mat outer_hsv_image, outer_threshold_image;
 	cv::Mat inner_hsv_image, inner_threshold_image;
+	cv::Mat red_hsv_image, red_threshold_image;
 	cv::Mat lane_mark_image, bird_view_image;
 	cv::Mat canny_image;
 
@@ -810,6 +807,7 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 	/* RGB to HSV */
 	cv::cvtColor(roi_image, outer_hsv_image, COLOR_BGR2HSV);
 	cv::cvtColor(roi_image, inner_hsv_image, COLOR_BGR2HSV);
+	cv::cvtColor(roi_image, red_hsv_image, COLOR_BGR2HSV);
 
 	/* Binarization (Color thresholding) */
     cv::inRange(
@@ -826,6 +824,13 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
         inner_threshold_image
     );
 
+	cv::inRange(
+        red_hsv_image,
+        Scalar(red_threshold.h_min, red_threshold.s_min, red_threshold.v_min),
+        Scalar(red_threshold.h_max, red_threshold.s_max, red_threshold.v_max),
+        red_threshold_image
+    );
+
 	/* Canny */
 	cv::Mat gray_image;
 	cv::Mat preprocess_canny_image;
@@ -839,26 +844,38 @@ bool LaneDetector::get_lines_from_raw(cv::Mat& raw_image,vector<segment_t>& oute
 	cv::dilate(preprocess_canny_image, canny_image, deliation_element);
 
 	/* Bitwise and (cany image and color binarization image) */
-	cv::Mat outer_bitwise_and_image, inner_bitwise_and_image;
+	cv::Mat outer_bitwise_and_image, inner_bitwise_and_image, red_bitwise_and_image;
 
 	cv::bitwise_and(outer_threshold_image, canny_image, outer_bitwise_and_image);
 	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
-
-	/* Hough transform */
-	vector<Vec4f> outer_cv_lines, inner_cv_lines;
-	cv::HoughLinesP(outer_bitwise_and_image, outer_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);
-	cv::HoughLinesP(inner_bitwise_and_image, inner_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);
-
-	/* Convert to xeno segment and do the side detection */
-	segments_side_recognize(outer_cv_lines, outer_xeno_lines, outer_threshold_image);
-	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
+	cv::bitwise_and(red_threshold_image, canny_image, red_bitwise_and_image);
 
 	send_visualize_image(
 		raw_image,
 		canny_image,
 		outer_threshold_image,
-		inner_threshold_image
+		inner_threshold_image,
+		red_threshold_image
 	);
+
+	/* Hough transform */
+	vector<Vec4f> outer_cv_lines, inner_cv_lines, red_cv_lines;
+	cv::HoughLinesP(outer_bitwise_and_image, outer_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);
+	cv::HoughLinesP(inner_bitwise_and_image, inner_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);
+	cv::HoughLinesP(red_bitwise_and_image, red_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);
+
+	/* Convert to xeno segment and do the side detection */
+	segments_side_recognize(outer_cv_lines, outer_xeno_lines, outer_threshold_image);
+	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
+	segments_side_recognize(red_cv_lines, red_xeno_lines, red_threshold_image);
+
+/*	send_visualize_image(
+		raw_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		red_threshold_image
+	);*/
 
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
 

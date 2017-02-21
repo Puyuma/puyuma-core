@@ -46,12 +46,11 @@ void create_trackbars()
 	namedWindow(window_name, WINDOW_AUTOSIZE);
 
 	//create trackbars and insert them into window
-	createTrackbar("H_MIN",window_name,&(hsv.h_min),255,on_trackbar,this);
-	createTrackbar("H_MAX",window_name,&(hsv.h_max),255,on_trackbar,this);
+	createTrackbar("H_MIN",window_name,&(hsv.h_min),180,on_trackbar,this);
+	createTrackbar("H_MAX",window_name,&(hsv.h_max),180,on_trackbar,this);
 	createTrackbar("S_MIN",window_name,&(hsv.s_min),255,on_trackbar,this);
 	createTrackbar("S_MAX",window_name,&(hsv.s_max),255,on_trackbar,this);
 	createTrackbar("V_MIN",window_name,&(hsv.v_min),255,on_trackbar,this);
-	createTrackbar("V_MAX",window_name,&(hsv.v_max),255,on_trackbar,this);
 	createTrackbar("V_MAX",window_name,&(hsv.v_max),255,on_trackbar,this);
 
 	//save button
@@ -65,7 +64,7 @@ void threshold_image_cb(const sensor_msgs::Image& new_image_msg)
 
 	threshold_image = cv_ptr->image;
 
-	cv::imshow(title +" threshold image", threshold_image);
+	cv::imshow(title +"_threshold_setting", threshold_image);
 }
 
 void set_color(std::string color_title,char color)
@@ -161,6 +160,7 @@ int main(int argc, char* argv[])
 	}
 	ColorCalibration color_calibration;
 	color_calibration.set_color(title,color);
+	ROS_INFO("%c   %s",color,title.c_str());
 	color_calibration.threshold_image_sub = nh.subscribe(title+"_threshold_image", 5,&ColorCalibration::threshold_image_cb,&color_calibration);
 
 	//Call rosservice to get hsv current value
@@ -169,10 +169,10 @@ int main(int argc, char* argv[])
 	srv.request.color = color_calibration.color;
 
 	if(send_hsv_srv.call(srv)) {
-		ROS_INFO("Get %c hsv threshold",color_calibration.title);
+		ROS_INFO("Get %s hsv threshold",color_calibration.title.c_str());
 		color_calibration.hsv.set_hsv(
 			srv.response.h_min,srv.response.h_max,
-			srv.response.s_min,srv.response.h_min,
+			srv.response.s_min,srv.response.h_max,
 			srv.response.v_min,srv.response.v_max);
 	}
 	else
