@@ -13,3 +13,11 @@ inner:
   s_max: 256
   v_min: 30
   v_max: 256
+
+red:
+  h_min: 0
+  h_max: 24
+  s_min: 78
+  s_max: 255
+  v_min: 0
+  v_max: 255

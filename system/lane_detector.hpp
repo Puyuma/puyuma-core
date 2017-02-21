@@ -168,8 +168,8 @@ class LaneDetector {
 	bool generate_vote(segment_t& lane_segment, float& d, float& phi, int color);
 	bool find_highest_vote(vector<segment_t>& outer_xeno_lines, vector<segment_t>& inner_xeno_lines,
 		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg);
-	bool histogram_filter(vector<segment_t> outer_xeno_lines, vector<segment_t> inner_xeno_line,
-		int& highest_vote_i, int& highest_vote_j, float& final_phi, float& fianl_d);
+	bool histogram_filter(vector<segment_t> outer_lines, vector<segment_t> inner_line,
+		float& filtered_phi, float& filtered_d);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);

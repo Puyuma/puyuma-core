@@ -24,61 +24,6 @@
 using namespace std;
 using namespace cv;
 
-TurnRange::TurnRange() :
-	predicted_phi(0), predicted_d(0),
-	phi_up_bound(0), phi_low_bound(0),
-	d_up_bound(0), d_low_bound(0)
-{
-}
-
-void TurnRange::set_range_self(int highest_vote_i, int highest_vote_j)
-{
-	/* Convert i, j to most possible phi and d range */
-	predicted_phi = DELTA_PHI * highest_vote_i + PHI_MIN;
-	predicted_d = DELTA_D * highest_vote_j + D_MIN;
-
-	/* phi and d should in the range of predicted value +- delta/2 */
-	phi_up_bound = predicted_phi + DELTA_PHI / 2;
-	phi_low_bound = predicted_phi - DELTA_PHI / 2;
-	d_up_bound = predicted_d + DELTA_D / 2;
-	d_low_bound = predicted_d - DELTA_D / 2;
-}
-
-void TurnRange::set_range_intersection(Direction direction, int forwarding, int highest_vote_i, int highest_vote_j)
-{
-	switch(direction) {
-		case 0:
-		{
-			highest_vote_i = 45;
-			break;
-		}
-		case 1:
-		{
-			if((highest_vote_i = 75 - forwarding * 5) < 45)
-				highest_vote_i = 45;
-			break;
-		}
-		case 2:
-		{
-			if((highest_vote_i = 15 + forwarding * 5) > 45)
-				highest_vote_i = 45;
-			break;
-		}
-		default:
-			break;
-	}
-
-    /* Convert i, j to most possible phi and d range */
-    predicted_phi = DELTA_PHI * highest_vote_i + PHI_MIN;
-    predicted_d = DELTA_D * highest_vote_j + D_MIN;
-
-    /* phi and d should in the range of predicted value +- delta/2 */
-    phi_up_bound = predicted_phi + 10;
-    phi_low_bound = predicted_phi - 10;
-    d_up_bound = predicted_d + DELTA_D / 2;
-    d_low_bound = predicted_d - DELTA_D / 2;
-}
-
 LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	outer_threshold(0 , 180, 0, 255, 0, 255),
 	inner_threshold(0, 180, 0,255 ,0 , 255),
@@ -114,9 +59,6 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 
 			red_threshold_img_publisher =
 			node.advertise<sensor_msgs::Image>("xenobot/red_threshold_image", 10);
-
-	        marked_image_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 10);
 
 		bird_view_img_publisher = 
 			node.advertise<sensor_msgs::Image>("xenobot/bird_view_image", 10);
@@ -489,59 +431,6 @@ void LaneDetector::find_region_of_interest(cv::Mat& original_image, cv::Mat& roi
 	region.width = IMAGE_WIDTH;
 	region.height = IMAGE_HEIGHT / 2;
 
-#if 0
-	if(mode == SELF_DRIVING_MODE) {
-		roi_offset_x = 0;
-		roi_offset_y = IMAGE_HEIGHT / 2;
-		region.x = 0;
-		region.y = IMAGE_HEIGHT / 2;
-		region.width = IMAGE_WIDTH;
-		region.height = IMAGE_HEIGHT / 2;
-	}
-	else if(mode == INTERSECTION) {
-		switch(direction) {	//0->STRAIGHT, 1->RIGHT, 2->LEFT
-			case 0:
-			{
-				roi_offset_x = 0;
-				roi_offset_y = IMAGE_HEIGHT  / 4;
-				region.x = 0;
-				region.y = IMAGE_HEIGHT / 4;
-				region.width = IMAGE_WIDTH;
-				region.height = (IMAGE_HEIGHT * 3) / 4;
-				break;
-			}
-			case 1:
-			{
-				roi_offset_x = IMAGE_WIDTH / 2;
-				roi_offset_y = IMAGE_HEIGHT / 4;
-				region.x = IMAGE_WIDTH / 2;
-				region.y = IMAGE_HEIGHT / 4;
-				region.width = IMAGE_WIDTH / 2;
-				region.height = (IMAGE_HEIGHT * 3) / 4;
-				break;
-			}
-			case 2:
-			{
-				roi_offset_x = 0;
-				roi_offset_y = IMAGE_HEIGHT / 4;
-				region.x = 0;
-				region.y = IMAGE_HEIGHT / 4;
-				region.width = IMAGE_WIDTH / 2;
-				region.height = (IMAGE_HEIGHT * 3)/ 4;
-				break;
-			}
-			default:
-			{
-				region.x = 0;
-				region.y = IMAGE_HEIGHT / 2;
-				region.width = IMAGE_WIDTH;
-				region.height = IMAGE_HEIGHT / 2;
-				break;
-			}
-		}
-	}
-#endif
-
 	roi_image = original_image(region);
 }
 
@@ -562,46 +451,6 @@ void LaneDetector::draw_region_of_interest(cv::Mat lane_mark_image)
 	Point2f p4;
 	p4.x = 0;
 	p4.y = IMAGE_HEIGHT;
-
-#if 0
-	if(mode == SELF_DRIVING_MODE) {
-		p1.x = 0;			p1.y = roi_offset_y;
-		p2.x = IMAGE_WIDTH;	p2.y = roi_offset_y;
-		p3.x = IMAGE_WIDTH;	p3.y = IMAGE_HEIGHT;
-		p4.x = 0;			p4.y = IMAGE_HEIGHT;
-	}
-	else if(mode == INTERSECTION) {
-		switch(direction) {	//0->STRAIGHT, 1->RIGHT, 2->LEFT
-			case 0:
-				p1.x = 0;			p1.y = roi_offset_y;
-				p2.x = IMAGE_WIDTH;	p2.y = roi_offset_y;
-				p3.x = IMAGE_WIDTH;	p3.y = IMAGE_HEIGHT;
-				p4.x = 0;			p4.y = IMAGE_HEIGHT;
-				break;
-
-			case 1:
-				p1.x = IMAGE_WIDTH / 2;	p1.y = roi_offset_y;
-				p2.x = IMAGE_WIDTH;		p2.y = roi_offset_y;
-				p3.x = IMAGE_WIDTH;		p3.y = IMAGE_HEIGHT;
-				p4.x = IMAGE_WIDTH / 2;	p4.y = IMAGE_HEIGHT;
-				break;
-
-			case 2:
-				p1.x = 0;				p1.y = roi_offset_y;
-				p2.x = IMAGE_WIDTH / 2;	p2.y = roi_offset_y;
-				p3.x = IMAGE_WIDTH / 2;	p3.y = IMAGE_HEIGHT;
-				p4.x = 0;				p4.y = IMAGE_HEIGHT;
-				break;
-
-			default:
-				p1.x = 0;			p1.y = roi_offset_y;
-				p2.x = IMAGE_WIDTH;	p2.y = roi_offset_y;
-				p3.x = IMAGE_WIDTH;	p3.y = IMAGE_HEIGHT;
-				p4.x = 0;			p4.y = IMAGE_HEIGHT;
-				break;
-		}
-	}
-#endif
 
 	cv::line(lane_mark_image, p1, p2, Scalar(255, 128, 0), 2, CV_AA);
 	cv::line(lane_mark_image, p2, p3, Scalar(255, 128, 0), 2, CV_AA);
@@ -683,7 +532,7 @@ void LaneDetector::send_lanemark_image_thread(int case_type)
 	}
 
 	/* Draw car status */
-	if(case_type >2) {
+	if(case_type > 2) {
 		putText(lane_mark_image, "Self-driving mode on", Point(10, 15),
 			FONT_HERSHEY_COMPLEX_SMALL, 0.7, Scalar(0, 255, 0));
 
@@ -711,7 +560,6 @@ void LaneDetector::send_visualize_image_thread(
 	cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
 	cv::Mat red_threshold_image)
 {
-
 	/* Bird view image */
 	cv::Mat bird_view_image;
 	draw_bird_view_image(distorted_image, bird_view_image);
@@ -776,14 +624,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 		return false;
 	}
 
-	int highest_vote_i = 0, highest_vote_j = 0;
-
-	if(find_highest_vote(outer_xeno_lines, inner_xeno_lines, highest_vote_i, highest_vote_j, segments_msg) == false) {
-		send_lanemark_image(2);
-		return false;
-	}
-
-	if(histogram_filter(outer_xeno_lines, inner_xeno_lines, highest_vote_i, highest_vote_j, pose_phi, pose_d) == false) {
+	if(histogram_filter(outer_xeno_lines, inner_xeno_lines, pose_phi, pose_d) == false) {
 		send_lanemark_image(2);
 		return false;
 	}
@@ -856,7 +697,7 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_
 	cv::Canny(gray_image, preprocess_canny_image, CANNY_THRESHOLD_1, CANNY_THRESHOLD_2, 3);
 
 	/* Deliation */
-	Mat deliation_element = cv::getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	Mat deliation_element = cv::getStructuringElement(MORPH_Rect, Size(3, 3));
 	cv::dilate(preprocess_canny_image, canny_image, deliation_element);
 
 	/* Bitwise and (cany image and color binarization image) */
@@ -865,14 +706,6 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_
 	cv::bitwise_and(outer_threshold_image, canny_image, outer_bitwise_and_image);
 	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
 	cv::bitwise_and(red_threshold_image, canny_image, red_bitwise_and_image);
-
-	send_visualize_image(
-		raw_image,
-		canny_image,
-		outer_threshold_image,
-		inner_threshold_image,
-		red_threshold_image
-	);
 
 	/* Hough transform */
 	vector<Vec4f> outer_cv_lines, inner_cv_lines, red_cv_lines;
@@ -887,53 +720,56 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_
 
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
 		ROS_INFO("Failed to estimate the lane [No segment found]");
+
+		send_visualize_image(
+			raw_image,
+			canny_image,
+			outer_threshold_image,
+			inner_threshold_image,
+			red_threshold_image
+		);
+
 		return false;
 	}
-
-	return true;
-}
-
-bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector<segment_t>& inner_xeno_lines,
-		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg)
-{
-	int vote_count = 0;
-	xenobot::segment segment;
 
 	/*Perspective transformation */
 	segment_homography_transform(outer_xeno_lines);
 	segment_homography_transform(inner_xeno_lines);
 
+	return true;
+}
+
+bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segment_t>& inner_lines,
+		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg)
+{
+	int vote_count = 0;
+	xenobot::segment segment;
+
 	/* 2D Histogram, size = row * column */
 	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
 
 	/* Generate the vote */
-	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
+	for(size_t i = 0; i < outer_lines.size(); i++) {
 		float d_i, phi_i;
-		if(generate_vote(outer_xeno_lines.at(i), d_i, phi_i, WHITE) == false) {
-			outer_xeno_lines.erase(outer_xeno_lines.begin() + i);
+		if(generate_vote(outer_lines.at(i), d_i, phi_i, WHITE) == false) {
+			outer_lines.erase(outer_xeno_lines.begin() + i);
 			i--;
 			continue;
 		}
 
-		outer_xeno_lines.at(i).d = d_i;
-		outer_xeno_lines.at(i).phi = phi_i;
+		outer_lines.at(i).d = d_i;
+		outer_lines.at(i).phi = phi_i;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
 		int _j = (int)round((d_i - D_MIN) / DELTA_D);
 
 		//Drop the vote if it is out of the boundary
-		if(mode == INTERSECTION) {
-			outer_xeno_lines.erase(outer_xeno_lines.begin() + i);
+            	if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+               		outer_lines.erase(outer_xeno_lines.begin() + i) ;
 			i--;
-			continue;
-		} else if(mode == SELF_DRIVING_MODE) {
-            		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-                		outer_xeno_lines.erase(outer_xeno_lines.begin() + i) ;
-				i--;
-                		continue;
-            		}
-        	}
+               		continue;
+            	}
 
 		vote_count++;
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
@@ -946,16 +782,16 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
-	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
+	for(size_t i = 0; i < inner_lines.size(); i++) {
 		float d_i, phi_i;
-		if(generate_vote(inner_xeno_lines.at(i), d_i, phi_i, YELLOW) == false) {
-			inner_xeno_lines.erase(inner_xeno_lines.begin() + i);
+		if(generate_vote(inner_lines.at(i), d_i, phi_i, YELLOW) == false) {
+			inner_lines.erase(inner_xeno_lines.begin() + i);
 			i--;
 			continue;
 		}
 
-		inner_xeno_lines.at(i).d = d_i;
-		inner_xeno_lines.at(i).phi = phi_i;
+		inner_lines.at(i).d = d_i;
+		inner_lines.at(i).phi = phi_i;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
@@ -963,7 +799,7 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector
 	
 		//Drop the vote if it is out of the boundary
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-			inner_xeno_lines.erase(inner_xeno_lines.begin() + i) ;
+			inner_lines.erase(inner_xeno_lines.begin() + i) ;
 			i--;
 			continue;
 		}
@@ -998,49 +834,59 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_xeno_lines, vector
 	return true;
 }
 
-bool LaneDetector::histogram_filter(vector<segment_t> outer_xeno_lines, vector<segment_t> inner_xeno_lines,
-	int& highest_vote_i,int& highest_vote_j, float& final_phi, float& final_d)
+bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segment_t> inner_lines,
+	float& filtered_phi, float& filtered_d)
 {
-
-	/*According to mode and direction set the turn information*/
-	TurnRange turnrange;
-	if(mode == SELF_DRIVING_MODE) {
-		turnrange.set_range_self(highest_vote_i, highest_vote_j);
-	} else if(mode == INTERSECTION) {
-		turnrange.set_range_intersection(direction, forwarding, highest_vote_i, highest_vote_j);
+	/* Find highest vote */
+	int highest_vote_i = 0, highest_vote_j = 0;
+	if(find_highest_vote(outer_lines, inner_lines, highest_vote_i,
+		highest_vote_j, segments_msg) == false) {
+			return false;
 	}
+
+	/* Convert i, j to most possible phi and d range */
+	float predicted_phi = DELTA_PHI * highest_vote_i + PHI_MIN;
+	float predicted_d = DELTA_D * highest_vote_j + D_MIN;
+
+	//ROS_INFO("Predicted phi:%f, d:%f", predicted_phi, predicted_d);
+
+	/* phi and d should in the range of predicted value +- delta/2 */
+	float phi_up_bound = predicted_phi + DELTA_PHI;
+	float phi_low_bound = predicted_phi - DELTA_PHI;
+	float d_up_bound = predicted_d + DELTA_D;
+	float d_low_bound = predicted_d - DELTA_D;
 
 	float phi_mean = 0.0, d_mean = 0.0;
 	int phi_sample_cnt = 0, d_sample_cnt = 0;
 
 	/* Calculate the mean of the vote (TODO:Weighted average?) */
-	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
+	for(size_t i = 0; i < inner_lines.size(); i++) {
 		float phi_i, d_i;
-		phi_i = inner_xeno_lines.at(i).phi;
-		d_i = inner_xeno_lines.at(i).d;
+		phi_i = inner_lines.at(i).phi;
+		d_i = inner_lines.at(i).d;
 
-		if(phi_i >= turnrange.phi_low_bound && phi_i <= turnrange.phi_up_bound) {
+		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
 			phi_mean += phi_i;
 			phi_sample_cnt++;
 		}
 
-		if(d_i >= turnrange.d_low_bound && d_i <= turnrange.d_up_bound) {
+		if(d_i >= d_low_bound && d_i <= d_up_bound) {
 			d_mean += d_i;
 			d_sample_cnt++;
 		}
 	}
 
-	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
+	for(size_t i = 0; i < outer_lines.size(); i++) {
 		float phi_i, d_i;
-		phi_i = outer_xeno_lines.at(i).phi;
-		d_i = outer_xeno_lines.at(i).d;
+		phi_i = outer_lines.at(i).phi;
+		d_i = outer_lines.at(i).d;
 
-		if(phi_i >= turnrange.phi_low_bound && phi_i <= turnrange.phi_up_bound) {
+		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
 			phi_mean += phi_i;
 			phi_sample_cnt++;
 		}
 
-		if(d_i >= turnrange.d_low_bound && d_i <= turnrange.d_up_bound) {
+		if(d_i >= d_low_bound && d_i <= d_up_bound) {
 			d_mean += d_i;
 			d_sample_cnt++;
 		}
@@ -1054,8 +900,8 @@ bool LaneDetector::histogram_filter(vector<segment_t> outer_xeno_lines, vector<s
 	phi_mean /= (float)phi_sample_cnt;
 	d_mean /= (float)d_sample_cnt;
 
-	final_d = d_mean;
-	final_phi = phi_mean;
+	filtered_d = d_mean;
+	filtered_phi = phi_mean;
 
 	return true;
 }

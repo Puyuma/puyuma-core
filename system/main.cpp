@@ -218,9 +218,6 @@ void self_driving_thread_handler()
 			} else {
 				forward_motor(0, 0);
 			}
-		} else if(mode == INTERSECTION) {
-			intersection_controller(direction, get_pose, d, phi);
-			lane_detector->forwarding++;
 		}
 
 		std::this_thread::yield();
