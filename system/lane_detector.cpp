@@ -697,7 +697,7 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_
 	cv::Canny(gray_image, preprocess_canny_image, CANNY_THRESHOLD_1, CANNY_THRESHOLD_2, 3);
 
 	/* Deliation */
-	Mat deliation_element = cv::getStructuringElement(MORPH_Rect, Size(3, 3));
+	Mat deliation_element = cv::getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	cv::dilate(preprocess_canny_image, canny_image, deliation_element);
 
 	/* Bitwise and (cany image and color binarization image) */
