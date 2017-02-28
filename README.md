@@ -98,24 +98,26 @@ alias stop=". ~/catkin_ws/src/xenobot/halt_motor.sh"
 rosrun xenobot scatter_view_node.py
 ```
 
-##GDB
+##Debug with GDB
 
-1. Use **ps** command find the process ID
-
-```
-ps aux
-```
-
-2. Enter GDB or CGDB
+1. Compile binaries with debug symbol
 
 ```
-cgdb
+catkin_make -DCMAKE_BUILD_TYPE=Debug
 ```
 
-3. Attatch the process
+2. Activate controller with gdbserver
 
 ```
-attach **PROCESS_ID**
+#Terminal A
+roslaunch xenobot activate_controller_gdb.launch veh:=machine_name cal:=true
+```
+
+3. Launch gdb
+
+```
+#Terminal B
+make gdbauto
 ```
 
 ##Trobleshooting
