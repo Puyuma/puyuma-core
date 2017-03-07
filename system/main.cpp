@@ -102,7 +102,7 @@ bool send_hsv_threshold(xenobot::SendHsv::Request &req,xenobot::SendHsv::Respons
 	return true;
 }
 
-void load_yaml_parameter()
+bool load_yaml_parameter()
 {
 	ros::NodeHandle nh;
 
@@ -112,14 +112,14 @@ void load_yaml_parameter()
 		ROS_INFO("Abort: no machine name assigned!");
 		ROS_INFO("you may try:");
 		ROS_INFO("roslaunch xenobot activate_controller veh:=machine_name");
-		return;
+		return false;
 	}
 
 	string yaml_path;
 	if(nh.getParam("config_path", yaml_path) == false) {
 		ROS_INFO("Abort: no configuration path assigned!");
 		ROS_INFO("Instead of doing rosrun command, you should try roslaunch command");
-		return;
+		return false;
 	}
 
 	if(calibrate_mode == true) {
@@ -134,23 +134,25 @@ void load_yaml_parameter()
 
 	//Load extrinsic calibration data and color thresholding setting
 	if(lane_detector->load_yaml_setting() == false) {
-		return;
+		return false;
 	}
 
 	//Load intrinsic calibration data
 	if(load_intrinsic_calibration(yaml_path + machine_name + "/",
 		camera_matrix, distort_coffecient) == false) {
-		return;
+		return false;
 	}
 
 	//Load motor calibration data
 	if(read_motor_calibration(yaml_path + machine_name + "/") == false) {
 		ROS_INFO("Can't find motor calibration data, load default.");
+		return false;
 	}
 
 	//Load PID parameters
 	if(load_pid_param(yaml_path + machine_name + "/") == false) {
 		ROS_INFO("PID parameter is not exist, load the default setting!");
+		return false;
 	}
 }
 
@@ -297,7 +299,9 @@ int main(int argc, char* argv[])
 	wheel_command_subscriber =
 		node.subscribe("wheel_command", 1, wheel_command_callback);
 
-	load_yaml_parameter();
+	if(load_yaml_parameter() == false) {
+		return 0;
+	}
 
 	/* Motor initialization */
 	motor_init();
