@@ -3,7 +3,7 @@ project(xenobot)
 
 set(CMAKE_BUILD_TYPE Debug)
 set(ROS_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "-std=c++0x -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS "-std=c++0x -fsanitize=address -fno-omit-frame-pointer -static-libstdc++ -static-libasan")
 
 set(CMAKE_MODULE_PATH "~/catkin_ws/src/xenobot/cmake/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
 find_package(Sanitizers)
