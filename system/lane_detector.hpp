@@ -87,8 +87,13 @@ class LaneDetector {
 	int inner_threshold_s_min, inner_threshold_s_max;
 	int inner_threshold_v_min, inner_threshold_v_max;
 
+	int red_line_threshold_h_min, red_line_threshold_h_max;
+	int red_line_threshold_s_min, red_line_threshold_s_max;
+	int red_line_threshold_v_min, red_line_threshold_v_max;
+
 	cv::Mat outer_hsv_image, outer_threshold_image;
 	cv::Mat inner_hsv_image, inner_threshold_image;
+	cv::Mat red_line_hsv_image, red_line_threshold_image;
 	cv::Mat lane_mark_image, bird_view_image;
 	cv::Mat canny_image;
 
@@ -137,6 +142,7 @@ class LaneDetector {
 		cv::Mat distorted_image, cv::Mat canny_image,
 		cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
 		vector<segment_t> outer_lines, vector<segment_t> inner_lines,
+		vector<segment_t> red_lines,
 		float d, float phi, xenobot::segmentArray segments_msg);
 
 	void send_failed_visualize_image_thread(
@@ -147,6 +153,7 @@ class LaneDetector {
 		cv::Mat& distorted_image, cv::Mat& canny_image,
 		cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
 		vector<segment_t>& outer_lines, vector<segment_t>& inner_lines,
+		vector<segment_t>& red_lines,
 		float& d, float& phi, xenobot::segmentArray& segments_msg);
 
 	void send_visualize_image(cv::Mat& distorted_image, cv::Mat& canny_image,
@@ -160,7 +167,9 @@ class LaneDetector {
 	       double outer_h_max, double outer_h_min, double outer_s_max,
 	       double outer_s_min, double outer_v_max, double outer_v_min,
 	       double inner_h_max, double inner_h_min, double inner_s_max,
-	       double inner_s_min, double inner_v_max, double inner_v_min
+	       double inner_s_min, double inner_v_max, double inner_v_min,
+	       double red_line_h_max, double red_line_h_min, double red_line_s_max,
+	       double red_line_s_min, double red_line_v_max, double red_line_v_min
 	);
 
 	void save_thresholding_yaml();

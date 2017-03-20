@@ -3,11 +3,18 @@ outer_h_max: 191
 outer_s_min: 0
 outer_s_max: 200
 outer_v_min: 145
-outer_v_max: 256
+outer_v_max: 255
 
 inner_h_min: 0
 inner_h_max: 31
 inner_s_min: 70
-inner_s_max: 256
+inner_s_max: 255
 inner_v_min: 30
-inner_v_max: 256
+inner_v_max: 255
+
+red_line_h_min: 0
+red_line_h_max: 31
+red_line_s_min: 70
+red_line_s_max: 255
+red_line_v_min: 30
+red_line_v_max: 255

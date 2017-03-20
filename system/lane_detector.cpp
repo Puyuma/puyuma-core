@@ -33,7 +33,10 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	outer_threshold_v_min(0), outer_threshold_v_max(256),
 	inner_threshold_h_min(0), inner_threshold_h_max(256),
 	inner_threshold_s_min(0), inner_threshold_s_max(256),
-	inner_threshold_v_min(0), inner_threshold_v_max(256)
+	inner_threshold_v_min(0), inner_threshold_v_max(256),
+	red_line_threshold_h_min(0), red_line_threshold_h_max(256),
+	red_line_threshold_s_min(0), red_line_threshold_s_max(256),
+	red_line_threshold_v_min(0), red_line_threshold_v_max(256)
 {
 	this->calibrate_mode = calibrate_mode;
 
@@ -100,7 +103,9 @@ void LaneDetector::set_hsv(
 	double outer_h_max, double outer_h_min, double outer_s_max,
 	double outer_s_min, double outer_v_max, double outer_v_min,
 	double inner_h_max, double inner_h_min, double inner_s_max,
-	double inner_s_min, double inner_v_max, double inner_v_min)
+	double inner_s_min, double inner_v_max, double inner_v_min,
+	double red_line_h_max, double red_line_h_min, double red_line_s_max,
+	double red_line_s_min, double red_line_v_max, double red_line_v_min)
 {
 	outer_threshold_h_min = outer_h_min;
 	outer_threshold_h_max = outer_h_max;
@@ -115,6 +120,13 @@ void LaneDetector::set_hsv(
 	inner_threshold_s_max = inner_s_max;
 	inner_threshold_v_min = inner_v_min;
 	inner_threshold_v_max = inner_v_max;
+
+	red_line_threshold_h_min = red_line_h_min;
+	red_line_threshold_h_max = red_line_h_max;
+	red_line_threshold_s_min = red_line_s_min;
+	red_line_threshold_s_max = red_line_s_max;
+	red_line_threshold_v_min = red_line_v_min;
+	red_line_threshold_v_max = red_line_v_max;
 }
 
 bool LaneDetector::load_yaml_setting()
@@ -166,6 +178,8 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 	int outer_h_min, outer_s_min, outer_v_min;
 	int inner_h_max, inner_s_max, inner_v_max;
 	int inner_h_min, inner_s_min, inner_v_min;
+	int red_line_h_max, red_line_s_max, red_line_v_max;
+	int red_line_h_min, red_line_s_min, red_line_v_min;
 
 	try {
 		ROS_INFO("%s", _yaml_path.c_str());
@@ -185,6 +199,13 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 		inner_s_max = yaml["inner_s_max"].as<int>();
 		inner_v_min = yaml["inner_v_min"].as<int>();
 		inner_v_max = yaml["inner_v_max"].as<int>();
+
+		red_line_h_min = yaml["red_line_h_min"].as<int>();
+		red_line_h_max = yaml["red_line_h_max"].as<int>();
+		red_line_s_min = yaml["red_line_s_min"].as<int>();
+		red_line_s_max = yaml["red_line_s_max"].as<int>();
+		red_line_v_min = yaml["red_line_v_min"].as<int>();
+		red_line_v_max = yaml["red_line_v_max"].as<int>();
 	} catch(...) {
 		return false;
 	}
@@ -195,7 +216,10 @@ bool LaneDetector::read_threshold_setting(string _yaml_path)
 		outer_v_max, outer_v_min,
 		inner_h_max, inner_h_min,
 		inner_s_max, inner_s_min,
-		inner_v_max, inner_v_min
+		inner_v_max, inner_v_min,
+		red_line_h_max, red_line_h_min,
+		red_line_s_max, red_line_s_min,
+		red_line_v_max, red_line_v_min
 	);
 
 	return true;
@@ -225,6 +249,13 @@ void LaneDetector::save_thresholding_yaml()
 	append_yaml_data(out, "inner_s_min", inner_threshold_s_min);
 	append_yaml_data(out, "inner_v_max", inner_threshold_v_max);
 	append_yaml_data(out, "inner_v_min", inner_threshold_v_min);
+
+	append_yaml_data(out, "red_line_h_max", red_line_threshold_h_max);
+	append_yaml_data(out, "red_line_h_min", red_line_threshold_h_min);
+	append_yaml_data(out, "red_line_s_max", red_line_threshold_s_max);
+	append_yaml_data(out, "red_line_s_min", red_line_threshold_s_min);
+	append_yaml_data(out, "red_line_v_max", red_line_threshold_v_max);
+	append_yaml_data(out, "red_line_v_min", red_line_threshold_v_min);
 
 	/* Save yaml into file */
 	string file_path = yaml_path + "hsv_thresholding.yaml";
@@ -454,7 +485,7 @@ void LaneDetector::send_sucess_visualize_image_thread(
 	cv::Mat distorted_image, cv::Mat canny_image,
 	cv::Mat outer_threshold_image, cv::Mat inner_threshold_image,
 	/* Segments */
-	vector<segment_t> outer_lines, vector<segment_t> inner_lines,
+	vector<segment_t> outer_lines, vector<segment_t> inner_lines, vector<segment_t> red_lines,
 	/* Pose */
 	float d, float phi, xenobot::segmentArray segments_msg)
 {
@@ -469,6 +500,7 @@ void LaneDetector::send_sucess_visualize_image_thread(
 	/* Lane mark image */
 	mark_lane(lane_mark_image, outer_lines, Scalar(0, 0, 255), Scalar(255, 0, 0),  Scalar(0, 255, 0));
 	mark_lane(lane_mark_image, inner_lines, Scalar(255, 0, 0), Scalar(0, 0, 255),  Scalar(0, 255, 0));
+	mark_lane(lane_mark_image, red_lines, Scalar(0, 255, 0), Scalar(255, 0, 255),  Scalar(0, 255, 0));
 	draw_segment_side(lane_mark_image, outer_lines);
 	draw_segment_side(lane_mark_image, inner_lines);
 	draw_region_of_interest(lane_mark_image);
@@ -531,7 +563,7 @@ void LaneDetector::send_visualize_image(
 	cv::Mat& distorted_image, cv::Mat& canny_image,
 	cv::Mat& outer_threshold_image, cv::Mat& inner_threshold_image,
 	/* Segments */
-	vector<segment_t>& outer_lines, vector<segment_t>& inner_lines,
+	vector<segment_t>& outer_lines, vector<segment_t>& inner_lines, vector<segment_t>& red_lines,
 	/* Pose */
 	float& d, float& phi, xenobot::segmentArray& segments_msg)
 {
@@ -542,7 +574,7 @@ void LaneDetector::send_visualize_image(
 		canny_image,
 		outer_threshold_image,
 		inner_threshold_image,
-		outer_lines, inner_lines,
+		outer_lines, inner_lines, red_lines,
 		d, phi, segments_msg
 	);
 
@@ -575,6 +607,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	/* RGB to HSV */
 	cv::cvtColor(roi_image, outer_hsv_image, COLOR_BGR2HSV);
 	cv::cvtColor(roi_image, inner_hsv_image, COLOR_BGR2HSV);
+	cv::cvtColor(roi_image, red_line_hsv_image, COLOR_BGR2HSV);
 
 	/* Binarization (Color thresholding) */
 	cv::inRange(
@@ -591,9 +624,17 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		inner_threshold_image
 	);
 
-	cv::Mat outer_gray_image, inner_gray_image;
+	cv::inRange(
+		red_line_hsv_image,
+		Scalar(red_line_threshold_h_min, red_line_threshold_s_min, red_line_threshold_v_min),
+		Scalar(red_line_threshold_h_max, red_line_threshold_s_max, red_line_threshold_v_max),
+		red_line_threshold_image
+	);
+
+	cv::Mat outer_gray_image, inner_gray_image, red_line_gray_image;
 	cv::cvtColor(roi_image, outer_gray_image, CV_BGR2GRAY);
 	cv::cvtColor(roi_image, inner_gray_image, CV_BGR2GRAY);
+	cv::cvtColor(roi_image, red_line_gray_image, CV_BGR2GRAY);
 
 	/* Canny */
 	cv::Mat preprocess_canny_image;
@@ -605,20 +646,23 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 	cv::dilate(preprocess_canny_image, canny_image, deliation_element);
 
 	/* Bitwise and (cany image and color binarization image) */
-	cv::Mat outer_bitwise_and_image, inner_bitwise_and_image;
+	cv::Mat outer_bitwise_and_image, inner_bitwise_and_image, red_line_bitwise_and_image;
 
 	cv::bitwise_and(outer_threshold_image, canny_image, outer_bitwise_and_image);
 	cv::bitwise_and(inner_threshold_image, canny_image, inner_bitwise_and_image);
+	cv::bitwise_and(red_line_threshold_image, canny_image, red_line_bitwise_and_image);
 
 	/* Hough transform */
-	vector<Vec4f> outer_cv_lines, inner_cv_lines;
+	vector<Vec4f> outer_cv_lines, inner_cv_lines, red_cv_lines;
 	cv::HoughLinesP(outer_bitwise_and_image, outer_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
 	cv::HoughLinesP(inner_bitwise_and_image, inner_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
+	cv::HoughLinesP(red_line_bitwise_and_image, red_cv_lines, 1, CV_PI / 180, HOUGH_THRESHOLD, 50, 5);	
 
 	/* Convert to xeno segment and do the side detection */
-	vector<segment_t> outer_xeno_lines, inner_xeno_lines;
+	vector<segment_t> outer_xeno_lines, inner_xeno_lines, red_xeno_lines;
 	segments_side_recognize(outer_cv_lines, outer_xeno_lines, outer_threshold_image);
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
+	segments_side_recognize(red_cv_lines, red_xeno_lines, red_line_threshold_image);
 
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
 		send_visualize_image(
@@ -825,7 +869,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 		canny_image,
 		outer_threshold_image,
 		inner_threshold_image,
-		outer_xeno_lines, inner_xeno_lines,
+		outer_xeno_lines, inner_xeno_lines, red_xeno_lines,
 		final_d, final_phi, segments_msg
 	);
 

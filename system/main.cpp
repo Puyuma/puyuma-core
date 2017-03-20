@@ -65,7 +65,13 @@ void threshold_setting_callback(const xenobot::threshold_setting& threshold_sett
 		threshold_setting_msg.inner_s_max,
 		threshold_setting_msg.inner_s_min,
 		threshold_setting_msg.inner_v_max,
-		threshold_setting_msg.inner_v_min
+		threshold_setting_msg.inner_v_min,
+		threshold_setting_msg.red_line_h_max,
+		threshold_setting_msg.red_line_h_min,
+		threshold_setting_msg.red_line_s_max,
+		threshold_setting_msg.red_line_s_min,
+		threshold_setting_msg.red_line_v_max,
+		threshold_setting_msg.red_line_v_min
 	);
 }
 
@@ -142,7 +148,7 @@ void camera_thread_handler()
 	while(1) {
 		camera.grab();
 		camera.retrieve(frame);
-
+		cv::cvtColor(frame, frame, CV_RGB2BGR);
 		raw_image_queue.push(frame);
 
 		std::this_thread::yield();
