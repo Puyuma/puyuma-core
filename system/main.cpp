@@ -18,6 +18,7 @@
 #include "motor.hpp"
 #include "controller.hpp"
 #include "camera.hpp"
+#include "apriltags_detector.hpp"
 
 using namespace cv;
 
@@ -204,6 +205,25 @@ void self_driving_thread_handler()
 
 }
 
+void apriltags_detector_handler()
+{
+	ApriltagsDetector detector;
+	int apriltags_id;
+
+	cv::Mat image;
+	cv::Mat image_gray;
+
+	while(1) {
+		raw_image_queue.front(image);
+		apriltags_id = detector.processImage(image, image_gray);
+
+                //switch(apriltags_id) {
+                //}
+
+                std::this_thread::yield();
+        }
+}
+
 void ros_spin_thread_handler()
 {
 	while(1) {
@@ -246,6 +266,7 @@ int main(int argc, char* argv[])
 	thread self_driving_thread(self_driving_thread_handler);
 	thread camera_thread(camera_thread_handler);
 	thread ros_spin_thread(ros_spin_thread_handler);
+	thread apriltags_detector_thread(apriltags_detector_handler);
 
 	pause();
 

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(xenobot)
 
 set(CMAKE_BUILD_TYPE Debug)
+set(ROS_BUILD_TYPE Debug)
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 
 find_package(
@@ -11,6 +12,7 @@ find_package(
     std_msgs
     roscpp
 	message_generation
+	apriltags
 )
 
 find_package(Curses REQUIRED)
@@ -23,6 +25,11 @@ add_message_files(
     segmentArray.msg
     segment.msg
 )
+
+#add_service_files(
+#	FILES
+#	SendHsv.srv
+#)
 
 generate_messages(DEPENDENCIES std_msgs)
 
@@ -37,6 +44,7 @@ catkin_package(
 set(
     COLOR_THRESHOLD_INC
     ./calibration/color_threshold
+	./common
 )
 
 set(
@@ -119,6 +127,7 @@ set(
     ./system/controller.cpp
     ./system/motor.cpp
     ./system/camera.cpp
+	./system/apriltags_detector.cpp
 )
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})
