@@ -1,16 +1,15 @@
-#Xenobot
+# Puyuma-core
 
-Inspired by MIT, this is a lightweight replica of MIT duckietown project.
+Core components of self-driving car system, building a complete open source solution
+for low-cost hardware along with Linux real-time extensions.
 
-Our goal is to build a low cost self-driving car based on realtime Linux (patched by Xenomai)
-
-#Demo videos
+## Demo videos
 
 [![lane_following](https://github.com/ncku-ros2-research/xenobot/blob/master/materials/demo_video1.jpeg?raw=true)](https://www.youtube.com/watch?v=84MXc0_F61o)
 
 [![rviz](https://github.com/ncku-ros2-research/xenobot/blob/master/materials/demo_video2.jpeg?raw=true)](https://www.youtube.com/watch?v=XK602hzbORY&feature=youtu.be)
 
-##Installation
+## Installation
 
 Connecting to your raspberry pi using ssh then follow the instructions.
 
@@ -23,7 +22,7 @@ http://wiki.ros.org/kinetic/Installation/Ubuntu
 sudo apt install libncurse5-dev libopencv-dev ros-ROS_DISTRO-cv-bridge
 ```
 
-###1.Raspicam
+### 1.Raspicam
 
 ```
 git clone https://github.com/ncku-ros2-research/raspicam.git
@@ -34,7 +33,7 @@ cmake ..
 sudo make install
 ```
 
-###2.WiringPi
+### 2.WiringPi
 
 ```
 git clone https://github.com/ncku-ros2-research/WiringPi.git
@@ -42,7 +41,7 @@ cd WiringPi
 ./build
 ```
 
-###3.Apriltags_cpp
+### 3.Apriltags_cpp
 
 ```
 cd $(YOUR_CATKIN_WS)/src
@@ -51,7 +50,7 @@ cd $(YOUR_CATKIN_WS)
 catkin_make
 ```
 
-###4.Xenobot
+### 4.Puyuma
 
 ```
 cd $(YOUR_CATKIN_WS)/src
@@ -138,7 +137,7 @@ cgdb
 attach **PROCESS_ID**
 ```
 
-##Trobleshooting
+## Trobleshooting
 
 **Authentication to remote computer[ubuntu@192.168.0.102:22] failed.
 A common cause of this error is a missing key in your authorized_keys file.**
