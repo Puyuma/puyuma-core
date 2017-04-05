@@ -12,7 +12,7 @@ using namespace std;
 enum ControllerMode {
 	JOYSTICK_MODE,
 	SELF_DRIVING_MODE,
-	STOP_MODE
+	CONTROLLER_STOP_MODE
 };
 
 typedef struct {

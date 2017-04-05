@@ -36,7 +36,8 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	inner_threshold_v_min(0), inner_threshold_v_max(256),
 	red_line_threshold_h_min(0), red_line_threshold_h_max(256),
 	red_line_threshold_s_min(0), red_line_threshold_s_max(256),
-	red_line_threshold_v_min(0), red_line_threshold_v_max(256)
+	red_line_threshold_v_min(0), red_line_threshold_v_max(256),
+	intersection_mode(GO_STRAIGHT_MODE)
 {
 	this->calibrate_mode = calibrate_mode;
 
@@ -763,6 +764,33 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& final_d, float& fina
 #endif
 	}
 
+	/* Red lines */
+	for(size_t i = 0; i < red_xeno_lines.size(); i++) {
+		float d_i, phi_i;
+
+		if(generate_vote(red_xeno_lines.at(i), d_i, phi_i, RED) == false) {
+			red_xeno_lines.erase(red_xeno_lines.begin() + i);
+			continue;
+		}
+
+		red_xeno_lines.at(i).d = d_i;
+		red_xeno_lines.at(i).phi = phi_i;
+
+		vote_count++;
+
+		//Vote to ...
+		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
+		int _j = (int)round((d_i - D_MIN) / DELTA_D);
+
+		//Drop the vote if it is out of the boundary
+		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			red_xeno_lines.erase(red_xeno_lines.begin() + i);
+			continue;	
+		}
+
+		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
+	}
+
 	/* Now find who has be voted the most */
 	int highest_vote_i = 0, highest_vote_j = 0;
 
@@ -931,6 +959,51 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 			offset_vector *= +(W / 2) + L_Y + steady_bias;
 		} else {
 			offset_vector *= +(W / 2) + steady_bias;
+		}
+	} else if(color == RED) {
+		switch(intersection_mode) {
+		case GO_STRAIGHT_MODE:
+			/* Range check */
+			if(phi < -20.0 || phi > +20.0) {
+				return false;
+			}
+
+			//Treat as white
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -(W / 2) - L_R;
+			} else {
+				offset_vector *= -(W / 2);
+			}
+
+			break;
+		case TURN_LEFT_MODE:
+			/* Range check */
+			if(phi < -55.0 || phi > +55.0) {
+				return false;
+			}
+
+			//Between white and yellow line
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -L_R;
+			} else {
+				offset_vector *= 1.0;
+			}
+
+			break;
+		case TURN_RIGHT_MODE:
+			/* Range check */
+			if(phi < -90.0 || phi > +90.0) {
+				return false;
+			}
+
+			//Treat as white
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -(W / 2) - L_R;
+			} else {
+				offset_vector *= -(W / 2);
+			}
+
+			break;
 		}
 	}
 

@@ -25,6 +25,7 @@ using namespace std;
 /* Lane parameters */
 #define L_W 5.0 //cm
 #define L_Y 2.5
+#define L_R 3.0
 #define W 16.5
 
 /* Car parameter */
@@ -53,6 +54,13 @@ using namespace cv;
 
 enum SEGMENT_COLOR {WHITE, YELLOW, RED, UNKNOWN_COLOR};
 enum {LEFT_EDGE, RIGHT_EDGE, UNKNOWN_SIDE};
+
+enum {
+	GO_STRAIGHT_MODE,
+	TURN_LEFT_MODE,
+	TURN_RIGHT_MODE,
+	STOP_MODE
+} INTERSECTION_MODE;
 
 typedef struct {
 	int side; //Left or right?
@@ -103,6 +111,8 @@ class LaneDetector {
 	float roi_offset_y;
 
 	bool calibrate_mode;
+
+	int intersection_mode;
 
 	ros::NodeHandle node;
         ros::Publisher outer_threshold_img_publisher, outter_hough_img_publisher;
