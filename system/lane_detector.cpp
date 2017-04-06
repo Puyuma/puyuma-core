@@ -964,7 +964,7 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 		switch(intersection_mode) {
 		case GO_STRAIGHT_MODE:
 			/* Range check */
-			if(phi < -20.0 || phi > +20.0) {
+			if(phi > -20.0 && phi < +20.0) {
 				return false;
 			}
 
@@ -978,7 +978,7 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 			break;
 		case TURN_LEFT_MODE:
 			/* Range check */
-			if(phi < -55.0 || phi > +55.0) {
+			if(phi > -55.0 && phi < 0.0) {
 				return false;
 			}
 
@@ -992,7 +992,8 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 			break;
 		case TURN_RIGHT_MODE:
 			/* Range check */
-			if(phi < -90.0 || phi > +90.0) {
+			/* XXX:This is not correct */
+			if(phi > -90.0 && phi < +90.0) {
 				return false;
 			}
 
