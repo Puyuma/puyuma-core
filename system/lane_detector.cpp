@@ -103,17 +103,17 @@ void LaneDetector::publish_images(
 bool LaneDetector::set_hsv(char color, int h_min, int h_max,
 	int s_min,int s_max, int v_min, int v_max)
 {
-    HsvThreshold* threshold = get_threshold(color);
+	HsvThreshold* threshold = get_threshold(color);
 
-    threshold->set_hsv(h_min, h_max, s_min, s_max, v_min, v_max);
+	threshold->set_hsv(h_min, h_max, s_min, s_max, v_min, v_max);
 }
 
 HsvThreshold* LaneDetector::get_threshold(char color)
 {
-    switch (color){
-        case 'w': return &outer_threshold;
-        case 'y': return &inner_threshold;
-	case 'r': return &red_threshold;
+	switch (color){
+		case 'w': return &outer_threshold;
+		case 'y': return &inner_threshold;
+		case 'r': return &red_threshold;
         default: ROS_ERROR("Undefined color code :'%c'",color);
     }
 }
@@ -619,12 +619,12 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 
 	this->raw_image = raw_image;
 
-	if(image_preprocess(raw_image, outer_xeno_lines, inner_xeno_lines) == false) {
+	if(image_preprocess(raw_image) == false) {
 		send_lanemark_image(1);
 		return false;
 	}
-
-	if(histogram_filter(outer_xeno_lines, inner_xeno_lines, pose_phi, pose_d) == false) {
+//pass
+	if(histogram_filter(pose_phi, pose_d) == false) {
 		send_lanemark_image(2);
 		return false;
 	}
@@ -650,7 +650,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 	return true;
 }
 
-bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_xeno_lines,vector<segment_t>& inner_xeno_lines)
+bool LaneDetector::image_preprocess(cv::Mat& raw_image)
 {
 	cv::Mat outer_hsv_image, outer_threshold_image;
 	cv::Mat inner_hsv_image, inner_threshold_image;
@@ -735,12 +735,12 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_
 	/*Perspective transformation */
 	segment_homography_transform(outer_xeno_lines);
 	segment_homography_transform(inner_xeno_lines);
+	segment_homography_transform(red_xeno_lines);
 
 	return true;
 }
 
-bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segment_t>& inner_lines,
-		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg)
+bool LaneDetector::find_highest_vote(int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg)
 {
 	int vote_count = 0;
 	xenobot::segment segment;
@@ -749,27 +749,27 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
 
 	/* Generate the vote */
-	for(size_t i = 0; i < outer_lines.size(); i++) {
+	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
 		float d_i, phi_i;
-		if(generate_vote(outer_lines.at(i), d_i, phi_i, WHITE) == false) {
-			outer_lines.erase(outer_xeno_lines.begin() + i);
+		if(generate_vote(outer_xeno_lines.at(i), d_i, phi_i, WHITE) == false) {
+			outer_xeno_lines.erase(outer_xeno_lines.begin() + i);
 			i--;
 			continue;
 		}
 
-		outer_lines.at(i).d = d_i;
-		outer_lines.at(i).phi = phi_i;
+		outer_xeno_lines.at(i).d = d_i;
+		outer_xeno_lines.at(i).phi = phi_i;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
 		int _j = (int)round((d_i - D_MIN) / DELTA_D);
 
 		//Drop the vote if it is out of the boundary
-            	if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-               		outer_lines.erase(outer_xeno_lines.begin() + i) ;
+		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			outer_xeno_lines.erase(outer_xeno_lines.begin() + i) ;
 			i--;
-               		continue;
-            	}
+			continue;
+		}
 
 		vote_count++;
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
@@ -782,16 +782,16 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
-	for(size_t i = 0; i < inner_lines.size(); i++) {
+	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
 		float d_i, phi_i;
-		if(generate_vote(inner_lines.at(i), d_i, phi_i, YELLOW) == false) {
-			inner_lines.erase(inner_xeno_lines.begin() + i);
+		if(generate_vote(inner_xeno_lines.at(i), d_i, phi_i, YELLOW) == false) {
+			inner_xeno_lines.erase(inner_xeno_lines.begin() + i);
 			i--;
 			continue;
 		}
 
-		inner_lines.at(i).d = d_i;
-		inner_lines.at(i).phi = phi_i;
+		inner_xeno_lines.at(i).d = d_i;
+		inner_xeno_lines.at(i).phi = phi_i;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
@@ -799,7 +799,7 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 	
 		//Drop the vote if it is out of the boundary
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-			inner_lines.erase(inner_xeno_lines.begin() + i) ;
+			inner_xeno_lines.erase(inner_xeno_lines.begin() + i) ;
 			i--;
 			continue;
 		}
@@ -834,13 +834,11 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 	return true;
 }
 
-bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segment_t> inner_lines,
-	float& filtered_phi, float& filtered_d)
+bool LaneDetector::histogram_filter(float& filtered_phi, float& filtered_d)
 {
 	/* Find highest vote */
 	int highest_vote_i = 0, highest_vote_j = 0;
-	if(find_highest_vote(outer_lines, inner_lines, highest_vote_i,
-		highest_vote_j, segments_msg) == false) {
+	if(find_highest_vote(highest_vote_i,highest_vote_j, segments_msg) == false) {
 			return false;
 	}
 
@@ -860,10 +858,10 @@ bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segmen
 	int phi_sample_cnt = 0, d_sample_cnt = 0;
 
 	/* Calculate the mean of the vote (TODO:Weighted average?) */
-	for(size_t i = 0; i < inner_lines.size(); i++) {
+	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
 		float phi_i, d_i;
-		phi_i = inner_lines.at(i).phi;
-		d_i = inner_lines.at(i).d;
+		phi_i = inner_xeno_lines.at(i).phi;
+		d_i = inner_xeno_lines.at(i).d;
 
 		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
 			phi_mean += phi_i;
@@ -876,10 +874,10 @@ bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segmen
 		}
 	}
 
-	for(size_t i = 0; i < outer_lines.size(); i++) {
+	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
 		float phi_i, d_i;
-		phi_i = outer_lines.at(i).phi;
-		d_i = outer_lines.at(i).d;
+		phi_i = outer_xeno_lines.at(i).phi;
+		d_i = outer_xeno_lines.at(i).d;
 
 		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
 			phi_mean += phi_i;
