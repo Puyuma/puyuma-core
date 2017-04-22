@@ -1,21 +1,19 @@
 <launch>
-	<arg name="local" default="true"/>
-	<arg name="cal" default="false"/>
+<arg name="local" default="true"/>
+<arg name="cal" default="false"/>
 
-    <param name="config_path" value="$(find xenobot)/config/" />
+<group ns="$(arg veh)">
+	<param name="config_path" value="$(find xenobot)/config/" />
+	<param name="machine_name" value="$(arg veh)" />
+	<param name="calibrate" value="$(arg cal)"/>
 
-    <param name="machine_name" value="$(arg veh)" />
+	<group if="$(arg local)">
+		<node name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller" output="screen"/>
+	</group>
 
-    <param name="calibrate" value="$(arg cal)"/>
-
-    <group if="$(arg local)">
-        <node name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller" output="screen"/>
-    </group>
-
-    <group unless="$(arg local)">
-        <machine name="remote" address="$(arg veh).local" user="ubuntu"
-		env-loader="~/catkin_ws/src/xenobot/env.sh" />
-        <node machine="remote" name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller"
-                output="screen"/>
-    </group>
+	<group unless="$(arg local)">
+		<machine name="remote" address="$(arg veh).local" user="ubuntu"env-loader="~/catkin_ws/src/xenobot/env.sh" />
+		<node machine="remote" name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller"output="screen"/>
+	</group>
+</group>
 </launch>
