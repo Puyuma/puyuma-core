@@ -24,6 +24,8 @@
 
 using namespace cv;
 
+//global node handler
+ros::NodeHandle *nh;
 LaneDetector* lane_detector;
 cv::Mat camera_matrix, distort_coffecient;
 
@@ -104,11 +106,9 @@ bool send_hsv_threshold(xenobot::SendHsv::Request &req,xenobot::SendHsv::Respons
 
 void load_yaml_parameter()
 {
-	ros::NodeHandle nh;
-
 	/* Read ROS parameters */
 	string machine_name;
-	if(nh.getParam("machine_name", machine_name) == false) {
+	if(nh->getParam("machine_name", machine_name) == false) {
 		ROS_INFO("Abort: no machine name assigned!");
 		ROS_INFO("you may try:");
 		ROS_INFO("roslaunch xenobot activate_controller veh:=machine_name");
@@ -116,7 +116,7 @@ void load_yaml_parameter()
 	}
 
 	string yaml_path;
-	if(nh.getParam("config_path", yaml_path) == false) {
+	if(nh->getParam("config_path", yaml_path) == false) {
 		ROS_INFO("Abort: no configuration path assigned!");
 		ROS_INFO("Instead of doing rosrun command, you should try roslaunch command");
 		return;
@@ -276,9 +276,10 @@ int main(int argc, char* argv[])
         ros::Time::init();
         ros::Rate loop_rate(30);
 
-	ros::NodeHandle node("xenobot");
+	ros::NodeHandle node;
+	nh = &node;
 
-	if(!node.getParam("/calibrate", calibrate_mode)) 
+	if(!node.getParam("calibrate", calibrate_mode)) 
 		ROS_INFO("Fail to get calibration mode,use \"true\" instead of \"1\".");
 
 	if(calibrate_mode){

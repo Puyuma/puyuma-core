@@ -1,6 +1,6 @@
 <launch>
-<arg name="local" default="true"/>
-<arg name="cal" default="false"/>
+	<arg name="local" default="true"/>
+	<arg name="cal" default="false"/>
 
 <group ns="$(arg veh)">
 	<param name="config_path" value="$(find xenobot)/config/" />
@@ -12,8 +12,8 @@
 	</group>
 
 	<group unless="$(arg local)">
-		<machine name="remote" address="$(arg veh).local" user="ubuntu"env-loader="~/catkin_ws/src/xenobot/env.sh" />
-		<node machine="remote" name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller"output="screen"/>
+		<machine name="remote" address="$(arg veh).local" user="ubuntu" env-loader="~/catkin_ws/src/xenobot/env.sh" />
+		<node machine="remote" name="$(anon act_ctrl)" pkg="xenobot" type="activate_controller" output="screen"/>
 	</group>
 </group>
 </launch>

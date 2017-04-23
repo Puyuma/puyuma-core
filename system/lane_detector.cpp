@@ -21,6 +21,8 @@
 #define rad_to_deg(phi) (phi * 57.2957795)
 #define PI 3.141592
 
+extern ros::NodeHandle *nh;
+
 using namespace std;
 using namespace cv;
 
@@ -39,38 +41,37 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	roi_offset_x = 0;
 	roi_offset_y = IMAGE_HEIGHT / 2; 
 
-	ros::NodeHandle node;
 
-        marked_image_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 10);
+	marked_image_publisher =
+		nh->advertise<sensor_msgs::Image>("marked_image", 10);
 
 	if(calibrate_mode == true) {
 		raw_img_publisher =
-		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 10);
+		nh->advertise<sensor_msgs::Image>("distort_image", 10);
 
-        	outer_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 10);
+		outer_threshold_img_publisher =
+			nh->advertise<sensor_msgs::Image>("outer_threshold_image", 10);
 
-       		canny_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/canny_image", 10);
+		canny_img_publisher =
+			nh->advertise<sensor_msgs::Image>("canny_image", 10);
 
-       		inner_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 10);
+		inner_threshold_img_publisher =
+			nh->advertise<sensor_msgs::Image>("inner_threshold_image", 10);
 
-			red_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/red_threshold_image", 10);
+		red_threshold_img_publisher =
+			nh->advertise<sensor_msgs::Image>("red_threshold_image", 10);
 
 		bird_view_img_publisher = 
-			node.advertise<sensor_msgs::Image>("xenobot/bird_view_image", 10);
+			nh->advertise<sensor_msgs::Image>("bird_view_image", 10);
 
 		histogram_publisher =
-			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 10);
+			nh->advertise<xenobot::segmentArray>("segment_data", 10);
 
 		pose_d_publisher =
-			node.advertise<std_msgs::Float32>("/xenobot/pose/d", 10);
+			nh->advertise<std_msgs::Float32>("pose/d", 10);
 
 		pose_phi_publisher =
-			node.advertise<std_msgs::Float32>("/xenobot/pose/phi", 10);
+			nh->advertise<std_msgs::Float32>("pose/phi", 10);
 	}
 }
 
