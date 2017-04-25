@@ -579,12 +579,14 @@ void LaneDetector::send_lanemark_image(int case_type)
 		return;
 	}
 
-	thread send_image_thread(
+	send_lanemark_image_thread(case_type);
+
+/*	thread send_image_thread(
 		&LaneDetector::send_lanemark_image_thread,
 		this, case_type
-	);
+	);*/
 
-	send_image_thread.detach();
+	//send_image_thread.detach();
 }
 
 void LaneDetector::send_visualize_image(
@@ -597,7 +599,15 @@ void LaneDetector::send_visualize_image(
 		return;
 	}
 
-	thread send_image_thread(
+	send_visualize_image_thread(
+		distorted_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		red_threshold_image
+	);
+
+/*	thread send_image_thread(
 		&LaneDetector::send_visualize_image_thread,
 		this,
 		distorted_image,
@@ -607,7 +617,7 @@ void LaneDetector::send_visualize_image(
 		red_threshold_image
 	);
 
-	send_image_thread.detach();
+	send_image_thread.detach();*/
 }
 
 bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_phi)
@@ -721,17 +731,16 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image)
 
 	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
 		ROS_INFO("Failed to estimate the lane [No segment found]");
-
-		send_visualize_image(
-			raw_image,
-			canny_image,
-			outer_threshold_image,
-			inner_threshold_image,
-			red_threshold_image
-		);
-
 		return false;
 	}
+
+	send_visualize_image(
+		raw_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		red_threshold_image
+	);
 
 	/*Perspective transformation */
 	segment_homography_transform(outer_xeno_lines);

@@ -156,13 +156,15 @@ void load_yaml_parameter()
 
 void camera_thread_handler()
 {
-	cv::Mat frame;
+	cv::Mat frame, bgr_frame;
 
 	while(1) {
 		camera.grab();
 		camera.retrieve(frame);
 
-		raw_image_queue.push(frame);
+		cv::cvtColor(frame, bgr_frame, COLOR_RGB2BGR);
+
+		raw_image_queue.push(bgr_frame);
 
 		std::this_thread::yield();
 	}
