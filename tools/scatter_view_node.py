@@ -23,8 +23,7 @@ colors=  ['w','y','r']
 ################
 
 n = len(colors)
-print n
-
+pause_state = False
 foo = None
 
 class Foo(QObject):
@@ -34,10 +33,11 @@ class Foo(QObject):
 	def e(self):
 		self.trigger.emit()
 	def handler(self):
-		plotWidget.clear()
+		if(pause_state == False):
+			plotWidget.clear()
 
-		for i in range(n):
-			plotWidget.plot(d[i],phi[i],pen=None,symbol='x',symbolBrush=pg.mkBrush(colors[i]))
+			for i in range(n):
+				plotWidget.plot(d[i],phi[i],pen=None,symbol='x',symbolBrush=pg.mkBrush(colors[i]))
 
 def sig_INT_handler(signal, frame):
 	print('You pressed Ctrl+C!')
@@ -75,8 +75,8 @@ def main():
 	app = QtGui.QApplication([])
 	foo = Foo()
 	rospy.init_node('scatter_view_node',anonymous=True)
-
-	topic_name = "/xenobot/segment_data"
+	topic_name = rospy.get_param('~veh')
+	topic_name = topic_name + "/segment_data"
 	rospy.Subscriber(topic_name, segmentArray, data_cb)
 	signal.signal(signal.SIGINT, sig_INT_handler)
 	foo.c()
@@ -89,6 +89,17 @@ def main():
 
 	view = plotWidget.getViewBox()
 	view.setRange(xRange=dRange, yRange=phiRange)
+
+	plotItem = plotWidget.getPlotItem()
+
+	def mouseClick(evt):
+		global pause_state
+		print "click"
+		pause_state = not pause_state
+
+	#proxy = pg.SignalProxy(plotItem.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
+	plotItem.scene().sigMouseClicked.connect(mouseClick)
+
 
 	app.exec_()
 
