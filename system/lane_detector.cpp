@@ -729,11 +729,6 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image)
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
 	segments_side_recognize(red_cv_lines, red_xeno_lines, red_threshold_image);
 
-	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
-		ROS_INFO("Failed to estimate the lane [No segment found]");
-		return false;
-	}
-
 	send_visualize_image(
 		raw_image,
 		canny_image,
@@ -741,6 +736,11 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image)
 		inner_threshold_image,
 		red_threshold_image
 	);
+
+	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
+		ROS_INFO("Failed to estimate the lane [No segment found]");
+		return false;
+	}
 
 	/*Perspective transformation */
 	segment_homography_transform(outer_xeno_lines);
