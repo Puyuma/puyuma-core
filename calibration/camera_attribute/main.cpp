@@ -13,9 +13,8 @@ int main(int argc, char* argv[])
 {
 	ros::init(argc, argv, "camera_attribute");
 	ros::NodeHandle node;
-	ros::Rate loop_rate(10);
+	ros::Rate loop_rate(20);
 	//ros::ServiceServer srv = node.advertiseService("", save_yaml_parameter);;
-
 	cv::Mat frame, bgr_frame;
 
 	if(!camera_setup(camera)) {
@@ -23,6 +22,7 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	namedWindow(win_name);
 	ros::Publisher raw_image_publisher = node.advertise<sensor_msgs::Image>("raw_image", 1);
 
 	while(ros::ok()) {
