@@ -141,3 +141,20 @@ add_dependencies(activate_controller ${PROJECT_NAME}_generate_messages_cpp)
 add_executable(image_capture tools/image_capture.cpp)
 target_link_libraries (image_capture ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} )
 
+################################################################################
+#Camera attribute
+
+set(
+    CAMERA_ATTRIBUTE_INC
+    ./system
+)
+
+set(
+    CAMERA_ATTRIBUTE_SRC
+    ./calibration/camera_attribute/main.cpp
+    ./system/camera.cpp
+)
+
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${CAMERA_ATTRIBUTE_INC})
+add_executable(camera_attribute_set ${CAMERA_ATTRIBUTE_SRC})
+target_link_libraries (camera_attribute_set ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} raspicam_cv raspicam  yaml-cpp)
