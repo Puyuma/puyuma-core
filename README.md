@@ -9,6 +9,12 @@ for low-cost hardware along with Linux real-time extensions.
 
 [![rviz](https://github.com/ncku-ros2-research/xenobot/blob/master/materials/demo_video2.jpeg?raw=true)](https://www.youtube.com/watch?v=XK602hzbORY&feature=youtu.be)
 
+Licensing
+---------
+`puyuma-core` is freely redistributable under the two-clause BSD License.
+Use of this source code is governed by a BSD-style license that can be found
+in the `LICENSE` file.
+
 ## Installation
 
 Connecting to your raspberry pi using ssh then follow the instructions.
