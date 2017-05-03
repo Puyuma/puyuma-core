@@ -19,19 +19,19 @@ in the `LICENSE` file.
 
 Connecting to your raspberry pi using ssh then follow the instructions.
 
-###0.Install dependency
+### 0.Install dependency
 
-```
-#Install ROS kinetic ,or indigo
+Install ROS kinetic ,or indigo from
 http://wiki.ros.org/kinetic/Installation/Ubuntu
 
+```
 sudo apt install libncurse5-dev libopencv-dev ros-ROS_DISTRO-cv-bridge
 ```
 
 ### 1.Raspicam
 
 ```
-git clone https://github.com/ncku-ros2-research/raspicam.git
+git clone https://github.com/Puyuma/raspicam.git
 cd raspicam/
 mkdir build
 cd build
@@ -42,7 +42,7 @@ sudo make install
 ### 2.WiringPi
 
 ```
-git clone https://github.com/ncku-ros2-research/WiringPi.git
+git clone https://github.com/Puyuma/WiringPi.git
 cd WiringPi
 ./build
 ```
@@ -51,7 +51,7 @@ cd WiringPi
 
 ```
 cd $(YOUR_CATKIN_WS)/src
-git clone https://github.com/ncku-ros2-research/apriltags
+git https://github.com/Puyuma/apriltags.git
 cd $(YOUR_CATKIN_WS)
 catkin_make
 ```
@@ -60,16 +60,16 @@ catkin_make
 
 ```
 cd $(YOUR_CATKIN_WS)/src
-git clone https://github.com/ncku-ros2-research/xenobot.git
+git clone https://github.com/Puyuma/puyuma-core.git
 cd $(YOUR_CATKIN_WS)
 catkin_make
 ```
 
-##Calibration
+## Calibration
 
 You must do the calibration before first time initiating the controller.
 
-###1. Intrinsic calibration
+### 1. Intrinsic calibration
 
 ```
 #Terminal A
@@ -79,13 +79,13 @@ rosrun xenobot intrinsic_calibration
 rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.031 image:=/xenobot/raw_image --no-service-check
 ```
 
-###2. Extrinsic calibration
+### 2. Extrinsic calibration
 
 ```
 roslaunch xenobot extrinsic_calibration.launch veh:=machine_name
 ```
 
-###3. Color detector calibration
+### 3. Color detector calibration
 
 ```
 pi$ roslaunch xenobot activate_controller.launch veh:=machine_name cal:=true
@@ -97,33 +97,36 @@ pc$ rosrun xenobot color_threshold_calibration _color:=[ 1 | 2 | 3 ]
 * inner == yellow
 * outer == white
 
-##Activating the controller
-
-```
-roslaunch xenobot activate_controller.launch veh:=machine_name
-```
-
-###4. Setup .bashrc
+### 4. Setup .bashrc
 
 Add:
 
 ```
 . /opt/ros/kinetic/setup.bash
-. ~/catkin_ws/devel/setup.bash
+. $(YOUR_CATKIN_WS)/devel/setup.bash
 export ROS_IP=`hostname -I`
 alias play="roslaunch xenobot activate_controller.launch veh:=VEHICLE_NAME calibrate:=true"
 alias stop=". ~/catkin_ws/src/xenobot/halt_motor.sh"
 ```
 
-##Analysing
+## Activating the controller
 
-###Scatter plot
+```
+roslaunch xenobot activate_controller.launch veh:=VEHICLE_NAME calibrate:=true
+# or simply
+play
+```
+
+
+## Analysing
+
+### Scatter plot
 
 ```
 rosrun xenobot scatter_view_node.py
 ```
 
-##GDB
+### GDB
 
 1. Use **ps** command find the process ID
 
