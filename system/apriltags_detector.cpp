@@ -55,7 +55,10 @@ int ApriltagsDetector::processImage(cv::Mat& image, cv::Mat& image_gray)
 	cv::cvtColor(image, image_gray, CV_BGR2GRAY);
 	vector<AprilTags::TagDetection> detections = m_tagDetector->extractTags(image_gray);
 	// print out each detection
-	cout << detections.size() << " tags detected:" << endl;
+	if(detections.size() >0) {
+		cout << detections.size() << " tags detected:" << endl;
+	}
+
 	for (int i=0; i<detections.size(); i++)
 	{
 		print_detection(detections[i]);

@@ -30,7 +30,7 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	outer_threshold(0 , 180, 0, 255, 0, 255),
 	inner_threshold(0, 180, 0,255 ,0 , 255),
 	mode(SELF_DRIVING_MODE),
-	direction(STRAIGHT),
+	intersection_mode(GO_STRAIGHT_MODE),
 	forwarding(0),
 	success_estimate(0)
 {
@@ -759,6 +759,7 @@ bool LaneDetector::find_highest_vote(int& highest_vote_i, int& highest_vote_j, x
 	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
 
 	/* Generate the vote */
+	/* White lines*/
 	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
 		float d_i, phi_i;
 		if(generate_vote(outer_xeno_lines.at(i), d_i, phi_i, WHITE) == false) {
@@ -792,6 +793,7 @@ bool LaneDetector::find_highest_vote(int& highest_vote_i, int& highest_vote_j, x
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
+	/* Yellow lines */
 	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
 		float d_i, phi_i;
 		if(generate_vote(inner_xeno_lines.at(i), d_i, phi_i, YELLOW) == false) {
@@ -823,6 +825,35 @@ bool LaneDetector::find_highest_vote(int& highest_vote_i, int& highest_vote_j, x
 		segment.color = 1; //YELLOW
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
+	}
+
+	/* Red lines */
+	//TODO red lines is not suit for highest vote mode
+	for(size_t i = 0; i < red_xeno_lines.size(); i++) {
+		float d_i, phi_i;
+
+		if(generate_vote(red_xeno_lines.at(i), d_i, phi_i, RED) == false) {
+			red_xeno_lines.erase(red_xeno_lines.begin() + i);
+			continue;
+		}
+
+		red_xeno_lines.at(i).d = d_i;
+		red_xeno_lines.at(i).phi = phi_i;
+
+		vote_count++;
+
+		//Vote to ...
+		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
+		int _j = (int)round((d_i - D_MIN) / DELTA_D);
+
+		//Drop the vote if it is out of the boundary
+		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			red_xeno_lines.erase(red_xeno_lines.begin() + i);
+			i--;
+			continue;	
+		}
+
+		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
 	}
 
 	/* Now find who has be voted the most */
@@ -969,7 +1000,54 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 		} else {
 			offset_vector *= +(W / 2) + steady_bias;
 		}
+	//TODO 
+	} else if(color == RED) {
+		switch(intersection_mode) {
+		case GO_STRAIGHT_MODE:
+			/* Range check */
+			if(phi < -20.0 || phi > +20.0) {
+				return false;
+			}
+
+			//Treat as white
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -(W / 2) - L_R;
+			} else {
+				offset_vector *= -(W / 2);
+			}
+
+			break;
+		case TURN_LEFT_MODE:
+			/* Range check */
+			if(phi < -55.0 || phi > +55.0) {
+				return false;
+			}
+
+			//Between white and yellow line
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -L_R;
+			} else {
+				offset_vector *= 1.0;
+			}
+
+			break;
+		case TURN_RIGHT_MODE:
+			/* Range check */
+			if(phi < -90.0 || phi > +90.0) {
+				return false;
+			}
+
+			//Treat as white
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -(W / 2) - L_R;
+			} else {
+				offset_vector *= -(W / 2);
+			}
+
+			break;
+		}
 	}
+
 
 	p1 += offset_vector;
 	p2 += offset_vector;
