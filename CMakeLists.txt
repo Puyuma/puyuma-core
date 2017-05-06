@@ -29,6 +29,7 @@ add_message_files(
 add_service_files(
 	FILES
 	SendHsv.srv
+	SetAtt.srv
 )
 
 generate_messages(DEPENDENCIES std_msgs)

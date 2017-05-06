@@ -2,13 +2,22 @@
 	<arg name="local" default="true"/>
 	<arg name="cal" default="false"/>
 
+	<!--launch in valgrind debugger-->
+	<arg name="val" default="false"/>
+
 <group ns="$(arg veh)">
 	<param name="config_path" value="$(find xenobot)/config/" />
 	<param name="machine_name" value="$(arg veh)" />
 	<param name="calibrate" value="$(arg cal)"/>
 
 	<group if="$(arg local)">
-		<node name="$(anon act_ctrl)" pkg="xenobot" type="camera_attribute_set" output="screen"/>
+		<group if="$(arg val)">
+			<node name="$(anon act_ctrl)" pkg="xenobot" type="camera_attribute_set" launch-prefix="valgrind" output="screen"/>
+		</group>
+
+		<group unless="$(arg val)">
+			<node name="$(anon act_ctrl)" pkg="xenobot" type="camera_attribute_set"  output="screen"/>
+		</group>
 	</group>
 
 	<group unless="$(arg local)">
