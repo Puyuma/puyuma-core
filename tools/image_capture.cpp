@@ -42,6 +42,10 @@ void img_cb(const sensor_msgs::Image::ConstPtr& msg)
 	}
 }
 
+void print_usage() {
+	ROS_ERROR("image_capture _rate:= _num:= _veh:= _topic:=");
+	exit(1);
+}
 
 int main(int argc,char** argv) {
 	ros::init(argc, argv, "image_capture",ros::init_options::AnonymousName);
@@ -49,23 +53,21 @@ int main(int argc,char** argv) {
 	std::string veh;
 	//std::string topic;
 	if(!pnh.getParam("veh",veh))
-		exit(1);
+		print_usage();
 	ROS_INFO("veh: %s",veh.c_str());
 
 	if(!pnh.getParam("num",num))
-		exit(1);
+		print_usage();
 	ROS_INFO("num: %d",num);
 
 	if(!pnh.getParam("topic",topic))
-        exit(1);
+        print_usage();
 	ROS_INFO("topic: %s",topic.c_str());
 
 	if(!pnh.getParam("rate",rate))
-		exit(1);
+		print_usage();
 	ROS_INFO("rate: %d",rate);
 
-	//ROS_INFO("%d\n",num);
-	//ROS_INFO("%s",veh.c_str());
 	ros::NodeHandle nh(veh.c_str());
 	ros::Subscriber sub = nh.subscribe(topic, 5, img_cb);
 	ros::spin();
