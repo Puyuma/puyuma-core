@@ -32,13 +32,14 @@ std::string names[] = {
 bool set_att(xenobot::SetAtt::Request &req,xenobot::SetAtt::Response &res)
 {
 	ROS_INFO("set att");
-	std::string result= "\n";
+	std::string result= "";
 
 	if(req.name==0) {
 
 		int arr_size = (sizeof(atts)/sizeof(int));
 		// print all  information
 		for(int i=0; i < arr_size; i++) {
+			result += "\n";
 			result += std::to_string(i+1);
 			result += " " + names[i];
 			result += ": ";
@@ -80,7 +81,7 @@ int main(int argc, char* argv[])
 		camera.grab();
 		camera.retrieve(frame);
 		sensor_msgs::ImagePtr img_msg =
-			cv_bridge::CvImage(std_msgs::Header(), "rgb8", frame).toImageMsg();
+			cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
 		raw_image_publisher.publish(img_msg);
 		ros::spinOnce();
 		loop_rate.sleep();
