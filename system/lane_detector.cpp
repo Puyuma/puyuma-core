@@ -29,7 +29,8 @@ using namespace cv;
 LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	outer_threshold(0 , 180, 0, 255, 0, 255),
 	inner_threshold(0, 180, 0,255 ,0 , 255),
-	mode(SELF_DRIVING_MODE),
+	mode(INTERSECTION),
+	//mode(SELF_DRIVING_MODE),
 	intersection_mode(GO_STRAIGHT_MODE),
 	forwarding(0),
 	success_estimate(0)
@@ -634,7 +635,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 		send_lanemark_image(1);
 		return false;
 	}
-//pass
+
 	if(histogram_filter(pose_phi, pose_d) == false) {
 		send_lanemark_image(2);
 		return false;
@@ -653,7 +654,8 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 	xenobot::segment segment;
 	segment.d = pose_d;
 	segment.phi = pose_phi;
-	segment.color = 2; //RED
+	segment.color = RESULT;
+	segment.side = UNKNOWN_SIDE;
 	segments_msg.segments.push_back(segment);
 
 	send_lanemark_image(3);
@@ -737,7 +739,7 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image)
 		red_threshold_image
 	);
 
-	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
+	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0 && red_xeno_lines.size() == 0) {
 		ROS_INFO("Failed to estimate the lane [No segment found]");
 		return false;
 	}
@@ -788,7 +790,8 @@ bool LaneDetector::find_highest_vote(int& highest_vote_i, int& highest_vote_j, x
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
-		segment.color = 0; //WHITE
+		segment.color = WHITE;
+		segment.side = outer_xeno_lines.at(i).side;
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
@@ -822,38 +825,31 @@ bool LaneDetector::find_highest_vote(int& highest_vote_i, int& highest_vote_j, x
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
-		segment.color = 1; //YELLOW
+		segment.color = YELLOW;
+		segment.side = inner_xeno_lines.at(i).side;
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
 	/* Red lines */
-	//TODO red lines is not suit for highest vote mode
+	//Red lines is not suit for highest vote mode, only generate phi d
 	for(size_t i = 0; i < red_xeno_lines.size(); i++) {
 		float d_i, phi_i;
 
 		if(generate_vote(red_xeno_lines.at(i), d_i, phi_i, RED) == false) {
 			red_xeno_lines.erase(red_xeno_lines.begin() + i);
+			i--;
 			continue;
 		}
 
 		red_xeno_lines.at(i).d = d_i;
 		red_xeno_lines.at(i).phi = phi_i;
 
-		vote_count++;
-
-		//Vote to ...
-		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
-		int _j = (int)round((d_i - D_MIN) / DELTA_D);
-
-		//Drop the vote if it is out of the boundary
-		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-			red_xeno_lines.erase(red_xeno_lines.begin() + i);
-			i--;
-			continue;	
-		}
-
-		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
+		segment.d = d_i;
+		segment.phi = phi_i;
+		segment.color = RED;
+		segment.side = red_xeno_lines.at(i).side;
+		segments_msg.segments.push_back(segment);
 	}
 
 	/* Now find who has be voted the most */
@@ -931,6 +927,20 @@ bool LaneDetector::histogram_filter(float& filtered_phi, float& filtered_d)
 		}
 	}
 
+	//TODO red lines
+	if(mode == INTERSECTION) {
+		for(size_t i = 0; i < red_xeno_lines.size(); i++) {
+			float phi_i, d_i;
+			phi_i = red_xeno_lines.at(i).phi;
+			d_i = red_xeno_lines.at(i).d;
+			phi_mean += phi_i;
+			phi_sample_cnt++;
+
+			d_mean += d_i;
+			d_sample_cnt++;
+		}
+	}
+
 	if(phi_sample_cnt == 0 || d_sample_cnt == 0) {
 		ROS_INFO("Failed to estimate the lane [Sample count equals zero]");
 		return false;
@@ -1000,43 +1010,26 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 		} else {
 			offset_vector *= +(W / 2) + steady_bias;
 		}
-	//TODO 
 	} else if(color == RED) {
 		switch(intersection_mode) {
 		case GO_STRAIGHT_MODE:
-			/* Range check */
-			if(phi < -20.0 || phi > +20.0) {
-				return false;
-			}
-
 			//Treat as white
 			if(lane_segment.side == RIGHT_EDGE) {
 				offset_vector *= -(W / 2) - L_R;
 			} else {
 				offset_vector *= -(W / 2);
 			}
-
 			break;
 		case TURN_LEFT_MODE:
-			/* Range check */
-			if(phi < -55.0 || phi > +55.0) {
-				return false;
-			}
-
-			//Between white and yellow line
+			//Treat as white
 			if(lane_segment.side == RIGHT_EDGE) {
-				offset_vector *= -L_R;
+				offset_vector *= +(W / 2) + L_R;
 			} else {
-				offset_vector *= 1.0;
+				offset_vector *= +(W / 2);
 			}
 
 			break;
 		case TURN_RIGHT_MODE:
-			/* Range check */
-			if(phi < -90.0 || phi > +90.0) {
-				return false;
-			}
-
 			//Treat as white
 			if(lane_segment.side == RIGHT_EDGE) {
 				offset_vector *= -(W / 2) - L_R;
@@ -1066,6 +1059,27 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 	d *= -1;
 
 	phi = rad_to_deg(phi);
+
+	/* Red lines range check  */
+	if(color == RED) {
+		switch(intersection_mode) {
+		case GO_STRAIGHT_MODE:
+			if(phi < -15.0 || phi > +15.0) {
+				return false;
+			}
+			break;
+		case TURN_LEFT_MODE:
+			if(phi < -55.0 || phi > +55.0) {
+				return false;
+			}
+			break;
+		case TURN_RIGHT_MODE:
+			if(phi < -90.0 || phi > +90.0) {
+				return false;
+			}
+			break;
+		}
+	}
 
 	return true;
 }

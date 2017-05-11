@@ -57,7 +57,7 @@ using namespace std;
 using namespace std;
 using namespace cv;
 
-enum SEGMENT_COLOR {WHITE, YELLOW, RED, UNKNOWN_COLOR};
+enum SEGMENT_COLOR {WHITE, YELLOW, RED, RESULT, UNKNOWN_COLOR};
 enum SEGMENT_EDGE {LEFT_EDGE, RIGHT_EDGE, UNKNOWN_SIDE};
 
 enum IntersectionMode {
