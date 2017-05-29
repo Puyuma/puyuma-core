@@ -6,6 +6,7 @@
 #include <ros/ros.h>
 
 #define THROTTLE_BASE 35 //35% of the throttle
+#define TRY_STOP_THRESHOLD 4
 
 using namespace std;
 
@@ -39,7 +40,7 @@ bool load_pid_param(string _yaml_path);
 void self_driving_controller(float d, float phi);
 void pid_halt();
 void intersection_controller(enum Direction direction, bool get_pose, float d, float phi);
-
+void inertia_forward();
 void bound(int min, int max, int& x);
 
 #endif

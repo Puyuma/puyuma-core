@@ -216,7 +216,7 @@ void self_driving_thread_handler()
 			if(get_pose == true) {
 				self_driving_controller(d, phi);
 			} else {
-				forward_motor(0, 0);
+				inertia_forward();
 			}
 		}
 
@@ -249,9 +249,7 @@ void apriltags_detector_handler()
                 		mode = SELF_DRIVING_MODE;
                 		break;
 			}
-        	}
-
-		cout << "Motor mode: " << mode << "\n";
+        }
 
 		std::this_thread::yield();
 	}
