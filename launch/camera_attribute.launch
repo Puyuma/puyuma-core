@@ -1,0 +1,28 @@
+<launch>
+	<arg name="local" default="true"/>
+	<arg name="cal" default="false"/>
+
+	<!--launch in valgrind debugger-->
+	<arg name="val" default="false"/>
+
+<group ns="$(arg veh)">
+	<param name="config_path" value="$(find xenobot)/config/" />
+	<param name="machine_name" value="$(arg veh)" />
+	<param name="calibrate" value="$(arg cal)"/>
+
+	<group if="$(arg local)">
+		<group if="$(arg val)">
+			<node name="$(anon act_ctrl)" pkg="xenobot" type="camera_attribute_set" launch-prefix="valgrind" output="screen"/>
+		</group>
+
+		<group unless="$(arg val)">
+			<node name="$(anon act_ctrl)" pkg="xenobot" type="camera_attribute_set"  output="screen"/>
+		</group>
+	</group>
+
+	<group unless="$(arg local)">
+		<machine name="remote" address="192.168.0.109" user="xenocat" password="000000" env-loader="~/catkin_ws/src/puyuma-core/env.sh" />
+		<node machine="remote" name="$(anon camera_att)" pkg="xenobot" type="camera_attribute_set" output="screen"/>
+	</group>
+</group>
+</launch>

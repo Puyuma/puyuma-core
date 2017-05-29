@@ -21,14 +21,17 @@
 #define rad_to_deg(phi) (phi * 57.2957795)
 #define PI 3.141592
 
+extern ros::NodeHandle *nh;
+
 using namespace std;
 using namespace cv;
 
 LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	outer_threshold(0 , 180, 0, 255, 0, 255),
 	inner_threshold(0, 180, 0,255 ,0 , 255),
-	mode(SELF_DRIVING_MODE),
-	direction(STRAIGHT),
+	mode(INTERSECTION),
+	//mode(SELF_DRIVING_MODE),
+	intersection_mode(GO_STRAIGHT_MODE),
 	forwarding(0),
 	success_estimate(0)
 {
@@ -39,38 +42,37 @@ LaneDetector::LaneDetector(string _yaml_path, bool calibrate_mode) :
 	roi_offset_x = 0;
 	roi_offset_y = IMAGE_HEIGHT / 2; 
 
-	ros::NodeHandle node;
 
-        marked_image_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/marked_image", 10);
+	marked_image_publisher =
+		nh->advertise<sensor_msgs::Image>("marked_image", 10);
 
 	if(calibrate_mode == true) {
 		raw_img_publisher =
-		node.advertise<sensor_msgs::Image>("xenobot/distort_image", 10);
+		nh->advertise<sensor_msgs::Image>("distort_image", 10);
 
-        	outer_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/outer_threshold_image", 10);
+		outer_threshold_img_publisher =
+			nh->advertise<sensor_msgs::Image>("outer_threshold_image", 10);
 
-       		canny_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/canny_image", 10);
+		canny_img_publisher =
+			nh->advertise<sensor_msgs::Image>("canny_image", 10);
 
-       		inner_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/inner_threshold_image", 10);
+		inner_threshold_img_publisher =
+			nh->advertise<sensor_msgs::Image>("inner_threshold_image", 10);
 
-			red_threshold_img_publisher =
-			node.advertise<sensor_msgs::Image>("xenobot/red_threshold_image", 10);
+		red_threshold_img_publisher =
+			nh->advertise<sensor_msgs::Image>("red_threshold_image", 10);
 
 		bird_view_img_publisher = 
-			node.advertise<sensor_msgs::Image>("xenobot/bird_view_image", 10);
+			nh->advertise<sensor_msgs::Image>("bird_view_image", 10);
 
 		histogram_publisher =
-			node.advertise<xenobot::segmentArray>("/xenobot/segment_data", 10);
+			nh->advertise<xenobot::segmentArray>("segment_data", 10);
 
 		pose_d_publisher =
-			node.advertise<std_msgs::Float32>("/xenobot/pose/d", 10);
+			nh->advertise<std_msgs::Float32>("pose/d", 10);
 
 		pose_phi_publisher =
-			node.advertise<std_msgs::Float32>("/xenobot/pose/phi", 10);
+			nh->advertise<std_msgs::Float32>("pose/phi", 10);
 	}
 }
 
@@ -103,17 +105,17 @@ void LaneDetector::publish_images(
 bool LaneDetector::set_hsv(char color, int h_min, int h_max,
 	int s_min,int s_max, int v_min, int v_max)
 {
-    HsvThreshold* threshold = get_threshold(color);
+	HsvThreshold* threshold = get_threshold(color);
 
-    threshold->set_hsv(h_min, h_max, s_min, s_max, v_min, v_max);
+	threshold->set_hsv(h_min, h_max, s_min, s_max, v_min, v_max);
 }
 
 HsvThreshold* LaneDetector::get_threshold(char color)
 {
-    switch (color){
-        case 'w': return &outer_threshold;
-        case 'y': return &inner_threshold;
-	case 'r': return &red_threshold;
+	switch (color){
+		case 'w': return &outer_threshold;
+		case 'y': return &inner_threshold;
+		case 'r': return &red_threshold;
         default: ROS_ERROR("Undefined color code :'%c'",color);
     }
 }
@@ -578,12 +580,14 @@ void LaneDetector::send_lanemark_image(int case_type)
 		return;
 	}
 
-	thread send_image_thread(
+	send_lanemark_image_thread(case_type);
+
+/*	thread send_image_thread(
 		&LaneDetector::send_lanemark_image_thread,
 		this, case_type
-	);
+	);*/
 
-	send_image_thread.detach();
+	//send_image_thread.detach();
 }
 
 void LaneDetector::send_visualize_image(
@@ -596,7 +600,15 @@ void LaneDetector::send_visualize_image(
 		return;
 	}
 
-	thread send_image_thread(
+	send_visualize_image_thread(
+		distorted_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		red_threshold_image
+	);
+
+/*	thread send_image_thread(
 		&LaneDetector::send_visualize_image_thread,
 		this,
 		distorted_image,
@@ -606,7 +618,7 @@ void LaneDetector::send_visualize_image(
 		red_threshold_image
 	);
 
-	send_image_thread.detach();
+	send_image_thread.detach();*/
 }
 
 bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_phi)
@@ -619,12 +631,12 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 
 	this->raw_image = raw_image;
 
-	if(image_preprocess(raw_image, outer_xeno_lines, inner_xeno_lines) == false) {
+	if(image_preprocess(raw_image) == false) {
 		send_lanemark_image(1);
 		return false;
 	}
 
-	if(histogram_filter(outer_xeno_lines, inner_xeno_lines, pose_phi, pose_d) == false) {
+	if(histogram_filter(pose_phi, pose_d) == false) {
 		send_lanemark_image(2);
 		return false;
 	}
@@ -642,7 +654,8 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 	xenobot::segment segment;
 	segment.d = pose_d;
 	segment.phi = pose_phi;
-	segment.color = 2; //RED
+	segment.color = RESULT;
+	segment.side = UNKNOWN_SIDE;
 	segments_msg.segments.push_back(segment);
 
 	send_lanemark_image(3);
@@ -650,7 +663,7 @@ bool LaneDetector::lane_estimate(cv::Mat& raw_image, float& pose_d, float& pose_
 	return true;
 }
 
-bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_xeno_lines,vector<segment_t>& inner_xeno_lines)
+bool LaneDetector::image_preprocess(cv::Mat& raw_image)
 {
 	cv::Mat outer_hsv_image, outer_threshold_image;
 	cv::Mat inner_hsv_image, inner_threshold_image;
@@ -718,29 +731,28 @@ bool LaneDetector::image_preprocess(cv::Mat& raw_image,vector<segment_t>& outer_
 	segments_side_recognize(inner_cv_lines, inner_xeno_lines, inner_threshold_image);
 	segments_side_recognize(red_cv_lines, red_xeno_lines, red_threshold_image);
 
-	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0) {
+	send_visualize_image(
+		raw_image,
+		canny_image,
+		outer_threshold_image,
+		inner_threshold_image,
+		red_threshold_image
+	);
+
+	if(outer_xeno_lines.size() == 0 && inner_xeno_lines.size() == 0 && red_xeno_lines.size() == 0) {
 		ROS_INFO("Failed to estimate the lane [No segment found]");
-
-		send_visualize_image(
-			raw_image,
-			canny_image,
-			outer_threshold_image,
-			inner_threshold_image,
-			red_threshold_image
-		);
-
 		return false;
 	}
 
 	/*Perspective transformation */
 	segment_homography_transform(outer_xeno_lines);
 	segment_homography_transform(inner_xeno_lines);
+	segment_homography_transform(red_xeno_lines);
 
 	return true;
 }
 
-bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segment_t>& inner_lines,
-		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg)
+bool LaneDetector::find_highest_vote(int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg)
 {
 	int vote_count = 0;
 	xenobot::segment segment;
@@ -749,27 +761,28 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 	float vote_box[HISTOGRAM_R_SIZE][HISTOGRAM_C_SIZE] = {0.0f};
 
 	/* Generate the vote */
-	for(size_t i = 0; i < outer_lines.size(); i++) {
+	/* White lines*/
+	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
 		float d_i, phi_i;
-		if(generate_vote(outer_lines.at(i), d_i, phi_i, WHITE) == false) {
-			outer_lines.erase(outer_xeno_lines.begin() + i);
+		if(generate_vote(outer_xeno_lines.at(i), d_i, phi_i, WHITE) == false) {
+			outer_xeno_lines.erase(outer_xeno_lines.begin() + i);
 			i--;
 			continue;
 		}
 
-		outer_lines.at(i).d = d_i;
-		outer_lines.at(i).phi = phi_i;
+		outer_xeno_lines.at(i).d = d_i;
+		outer_xeno_lines.at(i).phi = phi_i;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
 		int _j = (int)round((d_i - D_MIN) / DELTA_D);
 
 		//Drop the vote if it is out of the boundary
-            	if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-               		outer_lines.erase(outer_xeno_lines.begin() + i) ;
+		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
+			outer_xeno_lines.erase(outer_xeno_lines.begin() + i) ;
 			i--;
-               		continue;
-            	}
+			continue;
+		}
 
 		vote_count++;
 		vote_box[_i][_j] += 1.0; //Assume that every vote is equally important
@@ -777,21 +790,23 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
-		segment.color = 0; //WHITE
+		segment.color = WHITE;
+		segment.side = outer_xeno_lines.at(i).side;
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
 	}
 
-	for(size_t i = 0; i < inner_lines.size(); i++) {
+	/* Yellow lines */
+	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
 		float d_i, phi_i;
-		if(generate_vote(inner_lines.at(i), d_i, phi_i, YELLOW) == false) {
-			inner_lines.erase(inner_xeno_lines.begin() + i);
+		if(generate_vote(inner_xeno_lines.at(i), d_i, phi_i, YELLOW) == false) {
+			inner_xeno_lines.erase(inner_xeno_lines.begin() + i);
 			i--;
 			continue;
 		}
 
-		inner_lines.at(i).d = d_i;
-		inner_lines.at(i).phi = phi_i;
+		inner_xeno_lines.at(i).d = d_i;
+		inner_xeno_lines.at(i).phi = phi_i;
 
 		//Vote to ...
 		int _i = (int)round((phi_i - PHI_MIN) / DELTA_PHI);
@@ -799,7 +814,7 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 	
 		//Drop the vote if it is out of the boundary
 		if(_i >= HISTOGRAM_R_SIZE || _j >= HISTOGRAM_C_SIZE) {
-			inner_lines.erase(inner_xeno_lines.begin() + i) ;
+			inner_xeno_lines.erase(inner_xeno_lines.begin() + i) ;
 			i--;
 			continue;
 		}
@@ -810,9 +825,31 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 		//ROS message
 		segment.d = d_i;
 		segment.phi = phi_i;
-		segment.color = 1; //YELLOW
+		segment.color = YELLOW;
+		segment.side = inner_xeno_lines.at(i).side;
 		segments_msg.segments.push_back(segment);
 		//ROS_INFO("d:%f phi:%f", d_i, phi_i);
+	}
+
+	/* Red lines */
+	//Red lines is not suit for highest vote mode, only generate phi d
+	for(size_t i = 0; i < red_xeno_lines.size(); i++) {
+		float d_i, phi_i;
+
+		if(generate_vote(red_xeno_lines.at(i), d_i, phi_i, RED) == false) {
+			red_xeno_lines.erase(red_xeno_lines.begin() + i);
+			i--;
+			continue;
+		}
+
+		red_xeno_lines.at(i).d = d_i;
+		red_xeno_lines.at(i).phi = phi_i;
+
+		segment.d = d_i;
+		segment.phi = phi_i;
+		segment.color = RED;
+		segment.side = red_xeno_lines.at(i).side;
+		segments_msg.segments.push_back(segment);
 	}
 
 	/* Now find who has be voted the most */
@@ -834,13 +871,11 @@ bool LaneDetector::find_highest_vote(vector<segment_t>& outer_lines, vector<segm
 	return true;
 }
 
-bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segment_t> inner_lines,
-	float& filtered_phi, float& filtered_d)
+bool LaneDetector::histogram_filter(float& filtered_phi, float& filtered_d)
 {
 	/* Find highest vote */
 	int highest_vote_i = 0, highest_vote_j = 0;
-	if(find_highest_vote(outer_lines, inner_lines, highest_vote_i,
-		highest_vote_j, segments_msg) == false) {
+	if(find_highest_vote(highest_vote_i,highest_vote_j, segments_msg) == false) {
 			return false;
 	}
 
@@ -860,10 +895,10 @@ bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segmen
 	int phi_sample_cnt = 0, d_sample_cnt = 0;
 
 	/* Calculate the mean of the vote (TODO:Weighted average?) */
-	for(size_t i = 0; i < inner_lines.size(); i++) {
+	for(size_t i = 0; i < inner_xeno_lines.size(); i++) {
 		float phi_i, d_i;
-		phi_i = inner_lines.at(i).phi;
-		d_i = inner_lines.at(i).d;
+		phi_i = inner_xeno_lines.at(i).phi;
+		d_i = inner_xeno_lines.at(i).d;
 
 		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
 			phi_mean += phi_i;
@@ -876,10 +911,10 @@ bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segmen
 		}
 	}
 
-	for(size_t i = 0; i < outer_lines.size(); i++) {
+	for(size_t i = 0; i < outer_xeno_lines.size(); i++) {
 		float phi_i, d_i;
-		phi_i = outer_lines.at(i).phi;
-		d_i = outer_lines.at(i).d;
+		phi_i = outer_xeno_lines.at(i).phi;
+		d_i = outer_xeno_lines.at(i).d;
 
 		if(phi_i >= phi_low_bound && phi_i <= phi_up_bound) {
 			phi_mean += phi_i;
@@ -887,6 +922,20 @@ bool LaneDetector::histogram_filter(vector<segment_t> outer_lines, vector<segmen
 		}
 
 		if(d_i >= d_low_bound && d_i <= d_up_bound) {
+			d_mean += d_i;
+			d_sample_cnt++;
+		}
+	}
+
+	//TODO red lines
+	if(mode == INTERSECTION) {
+		for(size_t i = 0; i < red_xeno_lines.size(); i++) {
+			float phi_i, d_i;
+			phi_i = red_xeno_lines.at(i).phi;
+			d_i = red_xeno_lines.at(i).d;
+			phi_mean += phi_i;
+			phi_sample_cnt++;
+
 			d_mean += d_i;
 			d_sample_cnt++;
 		}
@@ -961,7 +1010,37 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 		} else {
 			offset_vector *= +(W / 2) + steady_bias;
 		}
+	} else if(color == RED) {
+		switch(intersection_mode) {
+		case GO_STRAIGHT_MODE:
+			//Treat as white
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -(W / 2) - L_R;
+			} else {
+				offset_vector *= -(W / 2);
+			}
+			break;
+		case TURN_LEFT_MODE:
+			//Treat as white
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= +(W / 2) + L_R;
+			} else {
+				offset_vector *= +(W / 2);
+			}
+
+			break;
+		case TURN_RIGHT_MODE:
+			//Treat as white
+			if(lane_segment.side == RIGHT_EDGE) {
+				offset_vector *= -(W / 2) - L_R;
+			} else {
+				offset_vector *= -(W / 2);
+			}
+
+			break;
+		}
 	}
+
 
 	p1 += offset_vector;
 	p2 += offset_vector;
@@ -980,6 +1059,27 @@ bool LaneDetector::generate_vote(segment_t& lane_segment, float& d,
 	d *= -1;
 
 	phi = rad_to_deg(phi);
+
+	/* Red lines range check  */
+	if(color == RED) {
+		switch(intersection_mode) {
+		case GO_STRAIGHT_MODE:
+			if(phi < -15.0 || phi > +15.0) {
+				return false;
+			}
+			break;
+		case TURN_LEFT_MODE:
+			if(phi < -55.0 || phi > +55.0) {
+				return false;
+			}
+			break;
+		case TURN_RIGHT_MODE:
+			if(phi < -90.0 || phi > +90.0) {
+				return false;
+			}
+			break;
+		}
+	}
 
 	return true;
 }

@@ -11,6 +11,7 @@ using namespace std;
 
 pid_control_t pid_d;
 pid_control_t pid_phi;
+int try_stop = 0;;
 
 bool load_pid_param(string _yaml_path)
 {
@@ -123,6 +124,19 @@ void self_driving_controller(float d, float phi)
 	bound(MOTOR_PWM_MIN, MOTOR_PWM_MAX, pwm_right);
 
 	set_motor_pwm(pwm_left, pwm_right);
+
+	try_stop = 0;
+}
+
+void inertia_forward()
+{
+	if( try_stop < TRY_STOP_THRESHOLD) {
+		forward_motor(THROTTLE_BASE,THROTTLE_BASE);
+		try_stop++;
+	} else {
+		halt_motor();
+	}
+
 }
 
 void intersection_controller(Direction direction, bool get_pose, float d, float phi)

@@ -14,17 +14,40 @@ plotWidget = None
 app = None
 d = []
 phi = []
-colors=  ['w','y','r']
-## Color Table ##
-#	0	white	#
-#	1	yellow	#
-#	2	red		#
-#				#
-################
+g_segs = None
+
+## Should be synchronize with system/lane_detector.hpp
+### Colors
+WHITE = 0
+YELLOW = 1
+RED = 2
+RESULT = 3
+UNKNOWN_COLOR = 4
+COLORSIZE = 5
+
+### Edges
+LEFT_EDGE = 0
+RIGHT_EDGE = 1
+UNKNOWN_SIDE = 2
+DELETED = 3
+EDGESIZE = 4
+##
+
+colors =  [ 0 for y in range(COLORSIZE)]
+colors[WHITE] = (0,0,255)
+colors[YELLOW] = (255,255,0)
+colors[RED] = (255,0,0)
+colors[RESULT] = (0,255,0)
+colors[UNKNOWN_COLOR] = (100,100,100)
+
+symbols = [0 for x in range(EDGESIZE)]
+symbols[LEFT_EDGE] = 'o'
+symbols[RIGHT_EDGE] = 's'
+symbols[UNKNOWN_SIDE] = 't'
+symbols[DELETED] = 'x'
 
 n = len(colors)
-print n
-
+pause_state = False
 foo = None
 
 class Foo(QObject):
@@ -34,35 +57,38 @@ class Foo(QObject):
 	def e(self):
 		self.trigger.emit()
 	def handler(self):
-		plotWidget.clear()
+		if(pause_state == False):
+			plotWidget.clear()
 
-		for i in range(n):
-			plotWidget.plot(d[i],phi[i],pen=None,symbol='x',symbolBrush=pg.mkBrush(colors[i]))
+			for seg in g_segs:
+				plotWidget.plot([seg.d],[seg.phi],pen=None,symbol=symbols[seg.side],symbolBrush=pg.mkBrush(colors[seg.color]))
 
 def sig_INT_handler(signal, frame):
 	print('You pressed Ctrl+C!')
 	app.quit()
 
 def data_cb(msg):
-	global d,phi
+	global d, phi, g_segs
 
 	size = len(msg.segments)
 	rospy.loginfo("get %d data",size)
 	d = []
 	phi = []
 
-	for i in range(n):
-		d_i = []
-		phi_i = []
-		d.append(d_i)
-		phi.append(phi_i)
+	g_segs = msg.segments
 
-	for seg in msg.segments:
-		if(seg.color < n):
-			d[seg.color].append(seg.d)
-			phi[seg.color].append(seg.phi)
-		else:
-			rospy.loginfo("invalid color code")
+#	for i in range(n):
+#		d_i = []
+#		phi_i = []
+#		d.append(d_i)
+#		phi.append(phi_i)
+
+#	for seg in msg.segments:
+#		if(seg.color < n):
+#			d[seg.color].append(seg.d)
+#			phi[seg.color].append(seg.phi)
+#		else:
+#			rospy.loginfo("invalid color code")
 
 	foo.e()
 
@@ -75,8 +101,8 @@ def main():
 	app = QtGui.QApplication([])
 	foo = Foo()
 	rospy.init_node('scatter_view_node',anonymous=True)
-
-	topic_name = "/xenobot/segment_data"
+	topic_name = rospy.get_param('~veh')
+	topic_name = topic_name + "/segment_data"
 	rospy.Subscriber(topic_name, segmentArray, data_cb)
 	signal.signal(signal.SIGINT, sig_INT_handler)
 	foo.c()
@@ -89,6 +115,16 @@ def main():
 
 	view = plotWidget.getViewBox()
 	view.setRange(xRange=dRange, yRange=phiRange)
+
+	plotItem = plotWidget.getPlotItem()
+
+	def mouseClick(evt):
+		global pause_state
+		print "click"
+		pause_state = not pause_state
+
+	plotItem.scene().sigMouseClicked.connect(mouseClick)
+
 
 	app.exec_()
 

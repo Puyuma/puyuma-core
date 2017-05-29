@@ -85,7 +85,7 @@ void button_cb(int state,void* _void)
 		ROS_ERROR("Failed to call service");
 
 	destroyAllWindows();
-	ROS_INFO("destroy_window");
+	ROS_INFO("Destroy window");
 	ros::shutdown();
 }
 
@@ -119,11 +119,20 @@ void marked_image_callback(const sensor_msgs::Image& new_image_msg)
 int main(int argc, char* argv[])
 {
 	/* ROS initialization */
-	ros::init(argc, argv, "xenobot_calibration_panel");
+	ros::init(argc, argv, "color_calibration",ros::init_options::AnonymousName);
 	ros::Time::init();
 
-	ros::NodeHandle nh("xenobot");
 	ros::NodeHandle private_nh("~");
+
+	std::string veh;
+
+	if(private_nh.getParam("veh", veh) == false) {
+        ROS_INFO("Abort: specify the machine name!");
+        ROS_INFO(" _veh:= MACHINE_NAME");
+        return -1;
+    }
+
+	ros::NodeHandle nh(veh.c_str());
 
 	ros::ServiceClient send_hsv_srv = nh.serviceClient<xenobot::SendHsv>("send_hsv_threshold");
 	ros::Subscriber marked_image_sub =
@@ -160,7 +169,7 @@ int main(int argc, char* argv[])
 	}
 	ColorCalibration color_calibration;
 	color_calibration.set_color(title,color);
-	ROS_INFO("%c   %s",color,title.c_str());
+	ROS_INFO("Chose %s color",title.c_str());
 	color_calibration.threshold_image_sub = nh.subscribe(title+"_threshold_image", 5,&ColorCalibration::threshold_image_cb,&color_calibration);
 
 	//Call rosservice to get hsv current value
@@ -169,10 +178,10 @@ int main(int argc, char* argv[])
 	srv.request.color = color_calibration.color;
 
 	if(send_hsv_srv.call(srv)) {
-		ROS_INFO("Get %s hsv threshold",color_calibration.title.c_str());
+		ROS_INFO("Get %s hsv threshold from %s",color_calibration.title.c_str(),veh.c_str());
 		color_calibration.hsv.set_hsv(
 			srv.response.h_min,srv.response.h_max,
-			srv.response.s_min,srv.response.h_max,
+			srv.response.s_min,srv.response.s_max,
 			srv.response.v_min,srv.response.v_max);
 	}
 	else

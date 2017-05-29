@@ -30,6 +30,7 @@ using namespace std;
 /* Lane parameters */
 #define L_W 5.0 //cm
 #define L_Y 2.5
+#define L_R 2.4
 #define W 16.5
 
 /* Car parameter */
@@ -56,8 +57,15 @@ using namespace std;
 using namespace std;
 using namespace cv;
 
-enum SEGMENT_COLOR {WHITE, YELLOW, RED, UNKNOWN_COLOR};
-enum {LEFT_EDGE, RIGHT_EDGE, UNKNOWN_SIDE};
+enum SEGMENT_COLOR {WHITE, YELLOW, RED, RESULT, UNKNOWN_COLOR};
+enum SEGMENT_EDGE {LEFT_EDGE, RIGHT_EDGE, UNKNOWN_SIDE};
+
+enum IntersectionMode {
+	GO_STRAIGHT_MODE,
+	TURN_LEFT_MODE,
+	TURN_RIGHT_MODE,
+	STOP_LINE_MODE
+};
 
 typedef struct {
 	int side; //Left or right?
@@ -118,6 +126,7 @@ class LaneDetector {
 
 	bool calibrate_mode;
 	enum ControllerMode mode;
+	enum IntersectionMode intersection_mode;
 	enum Direction direction;
 
 	ros::Publisher raw_img_publisher;
@@ -163,13 +172,10 @@ class LaneDetector {
 
 
 	/* lane estimation */
-	bool image_preprocess(cv::Mat& raw_image, vector<segment_t>& outer_xeno_line,
-		vector<segment_t>& inner_xeno_line);
+	bool image_preprocess(cv::Mat& raw_image);
 	bool generate_vote(segment_t& lane_segment, float& d, float& phi, int color);
-	bool find_highest_vote(vector<segment_t>& outer_xeno_lines, vector<segment_t>& inner_xeno_lines,
-		int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg);
-	bool histogram_filter(vector<segment_t> outer_lines, vector<segment_t> inner_line,
-		float& filtered_phi, float& filtered_d);
+	bool find_highest_vote(int& highest_vote_i, int& highest_vote_j, xenobot::segmentArray& segments_msg);
+	bool histogram_filter(float& filtered_phi, float& filtered_d);
 
 	public:
 	LaneDetector(string yaml_path, bool calibrate_mode);
