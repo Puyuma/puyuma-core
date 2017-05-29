@@ -126,10 +126,21 @@ set(
     ./system/main.cpp
     ./system/lane_detector.cpp
     ./system/controller.cpp
-    ./system/motor.cpp
     ./system/camera.cpp
-	./system/apriltags_detector.cpp
+    ./system/apriltags_detector.cpp
 )
+
+if(RT_FLAGS)
+    set(
+        XENOBOT_SRC
+        XENOBOT_SRC
+        ./system/rt_motor.cpp
+else()
+    set(
+        XENOBOT_SRC
+        XENOBOT_SRC
+        ./system/motor.cpp
+endif()
 
 include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${XENOBOT_INC})
 add_executable(activate_controller ${XENOBOT_SRC})
