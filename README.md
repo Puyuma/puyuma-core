@@ -25,7 +25,7 @@ Install ROS kinetic ,or indigo from
 http://wiki.ros.org/kinetic/Installation/Ubuntu
 
 ```
-sudo apt install libncurse5-dev libopencv-dev ros-ROS_DISTRO-cv-bridge
+sudo apt install libncurses5-dev libopencv-dev ros-ROS_DISTRO-cv-bridge
 ```
 
 ### 1.Raspicam
