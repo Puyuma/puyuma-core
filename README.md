@@ -51,7 +51,7 @@ cd WiringPi
 
 ```
 cd $(YOUR_CATKIN_WS)/src
-git https://github.com/Puyuma/apriltags.git
+git clone https://github.com/Puyuma/apriltags.git
 cd $(YOUR_CATKIN_WS)
 catkin_make
 ```
