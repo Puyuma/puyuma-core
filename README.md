@@ -65,6 +65,10 @@ cd $(YOUR_CATKIN_WS)
 catkin_make
 ```
 
+## Enable rpi-camera
+
+* [Raspberrypi offical website documents](https://www.raspberrypi.org/documentation/configuration/camera.md)
+
 ## Calibration
 
 You must do the calibration before first time initiating the controller.
